@@ -1,0 +1,5 @@
+bump:
+  recurse: false
+  file: 'lib/solidus_spreedly/version.rb'
+  message: Bump SolidusSpreedly to %{version}
+  tag: true
