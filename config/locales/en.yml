@@ -2,4 +2,12 @@
 # See https://github.com/svenfuchs/rails-i18n/tree/master/rails%2Flocale for starting points.
 
 en:
-  hello: Hello world
+  solidus_spreedly:
+    payment_type: Spreedly
+    transaction_states:
+      succeeded: Succeeded
+      pending: Pending authentication
+      processing: Processing
+      gateway_processing_failed: Gateway processing failed
+      gateway_processing_result_unknown: Gateway processing result unknown
+      failed: Failed

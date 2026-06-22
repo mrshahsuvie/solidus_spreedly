@@ -1,0 +1,246 @@
+# frozen_string_literal: true
+
+module SolidusSpreedly
+  # Solidus payment method backed by the Spreedly Core API.
+  #
+  # This model is the Solidus-facing adapter: it exposes the standard
+  # +Spree::PaymentMethod+ gateway interface (+purchase+, +authorize+,
+  # +capture+, +void+, +credit+) and translates those calls into
+  # {SolidusSpreedly::Client} requests, threading the configured orchestration
+  # mode and routing information through.
+  #
+  class Gateway < ::Spree::PaymentMethod
+    # Spreedly transaction types that represent a reversal already performed;
+    # such transactions can never be voided again.
+    REVERSAL_TRANSACTION_TYPES = %w[void credit].freeze
+
+    preference :environment_key, :string, default: nil
+    preference :access_secret, :string, default: nil
+
+    # Orchestration mode: "gateway" (default) routes through a specific
+    # Spreedly gateway, "workflow" routes through a Spreedly composer workflow.
+    preference :orchestration_mode, :string, default: "gateway"
+
+    # Used in :gateway mode. The token of the gateway configured in Spreedly.
+    preference :gateway_token, :string, default: nil
+
+    # Used (optionally) in :workflow mode. The composer workflow key.
+    preference :workflow_key, :string, default: nil
+
+    # Optional 3DS2 provider key, enabling the SCA flow on purchase/authorize.
+    preference :sca_provider_key, :string, default: nil
+
+    def partial_name
+      "spreedly"
+    end
+    alias_method :method_type, :partial_name
+
+    def payment_source_class
+      SolidusSpreedly::Source
+    end
+
+    # Returns the buyer's previously-vaulted Spreedly sources so they can be
+    # reused at checkout. Spreedly has no server-side customer object, so we
+    # simply scope retained sources by the order's user.
+    #
+    # @param order [Spree::Order]
+    # @return [ActiveRecord::Relation, Array]
+    def reusable_sources(order)
+      return [] unless order.user_id
+
+      payment_source_class
+        .with_payment_profile
+        .where(payment_method_id: id, user_id: order.user_id)
+    end
+
+    def client
+      @client ||= SolidusSpreedly::Client.new(client_options)
+    end
+
+    # The orchestration mode as a symbol (:gateway or :workflow).
+    def orchestration_mode
+      (preferred_orchestration_mode || "gateway").to_sym
+    end
+
+    # Purchase (authorize + capture in one step).
+    #
+    # @param amount_cents [Integer] amount in cents
+    # @param source [SolidusSpreedly::Source] the payment source
+    # @param gateway_options [Hash] Solidus gateway options
+    # @return [ActiveMerchant::Billing::Response]
+    def purchase(amount_cents, source, gateway_options)
+      client.purchase(amount_cents, payment_method_token_for(source), transaction_options(source, gateway_options))
+    end
+
+    # Authorize funds to be captured later.
+    #
+    # @see #purchase for the argument shape.
+    def authorize(amount_cents, source, gateway_options)
+      client.authorize(amount_cents, payment_method_token_for(source), transaction_options(source, gateway_options))
+    end
+
+    # Capture a previously authorized transaction (transaction-scoped, so it is
+    # independent of the orchestration mode).
+    #
+    # @param amount_cents [Integer] amount in cents to capture
+    # @param response_code [String] the Spreedly transaction token
+    def capture(amount_cents, response_code, gateway_options = {})
+      client.capture(amount_cents, response_code, currency_options(gateway_options))
+    end
+
+    # Void an unsettled transaction (transaction-scoped, mode-independent).
+    #
+    # The +source+ argument is part of the Solidus signature (payment profiles
+    # are supported) but is unused: Spreedly voids are keyed by transaction
+    # token alone.
+    #
+    # @param response_code [String] the Spreedly transaction token
+    def void(response_code, _source = nil, _gateway_options = {})
+      client.void(response_code)
+    end
+
+    # Refund a settled transaction (transaction-scoped, mode-independent). Maps
+    # to the Solidus +credit+ signature used by +Spree::Refund+.
+    #
+    # @param amount_cents [Integer, nil] amount in cents (nil refunds in full)
+    # @param response_code [String] the Spreedly transaction token
+    def credit(amount_cents, _source, response_code, gateway_options = {})
+      client.refund(amount_cents, response_code, currency_options(gateway_options))
+    end
+
+    # Fetch the current state of a Spreedly transaction.
+    #
+    # @param response_code [String] the Spreedly transaction token
+    # @return [ActiveMerchant::Billing::Response]
+    def show(response_code)
+      client.show(response_code)
+    end
+
+    # Reverse a transaction before Solidus knows whether it has settled.
+    #
+    # If the transaction can still be voided we void it; otherwise we issue a
+    # credit (refund).
+    #
+    # @param response_code [String] the Spreedly transaction token
+    # @return [ActiveMerchant::Billing::Response]
+    def cancel(response_code)
+      transaction = show(response_code)
+
+      if voidable?(transaction)
+        void_response = void(response_code)
+        return void_response if void_response.success?
+      end
+
+      credit(nil, nil, response_code, {})
+    end
+
+    # Used by +Spree::Payment#cancel!+ (Solidus >= 2.4).
+    #
+    # Returns the void response when the transaction can still be voided,
+    # otherwise +false+ so that Solidus falls back to creating a refund.
+    #
+    # @param payment [Spree::Payment] the payment to void
+    # @return [ActiveMerchant::Billing::Response, false]
+    def try_void(payment)
+      transaction = show(payment.response_code)
+      return false unless voidable?(transaction)
+
+      void_response = void(payment.response_code, payment.source, {originator: payment})
+      void_response.success? ? void_response : false
+    end
+
+    # Payment profiles are supported: the Spreedly payment method token stored
+    # on the source can be reused. This also fixes the +void+/+credit+ argument
+    # arity Solidus uses (source is passed through).
+    def payment_profiles_supported?
+      true
+    end
+
+    # Overridable routing hook for :gateway mode.
+    #
+    # Returns the Spreedly gateway token to charge for a given payment. Defaults
+    # to the single configured token; override to implement canary rollouts or
+    # multi-gateway routing.
+    #
+    # @param _source [SolidusSpreedly::Source]
+    # @param _gateway_options [Hash]
+    # @return [String]
+    def gateway_token_for(_source, _gateway_options)
+      preferred_gateway_token
+    end
+
+    protected
+
+    # Solidus calls +gateway+/+gateway_class+ through its default delegation,
+    # but we override the gateway interface directly, so the AM-style gateway
+    # class is intentionally not used.
+    def gateway_class
+      SolidusSpreedly::Client
+    end
+
+    private
+
+    def client_options
+      {
+        login: preferred_environment_key,
+        password: preferred_access_secret,
+        gateway_token: preferred_gateway_token,
+        workflow_key: preferred_workflow_key,
+        orchestration_mode: orchestration_mode,
+        test: test_mode?
+      }.compact
+    end
+
+    def payment_method_token_for(source)
+      source.respond_to?(:payment_method_token) ? source.payment_method_token : source
+    end
+
+    # Build the per-call options for purchase/authorize, threading the
+    # orchestration mode and routing information.
+    def transaction_options(source, gateway_options)
+      options = {
+        orchestration_mode: orchestration_mode,
+        currency: gateway_options[:currency],
+        order_id: gateway_options[:order_id],
+        ip: gateway_options[:ip],
+        email: gateway_options[:email]
+      }
+
+      if orchestration_mode == :workflow
+        options[:workflow_key] = preferred_workflow_key
+      else
+        options[:gateway_token] = gateway_token_for(source, gateway_options)
+      end
+
+      options[:sca_provider_key] = preferred_sca_provider_key if preferred_sca_provider_key.present?
+      options[:browser_info] = gateway_options[:browser_info] if gateway_options[:browser_info]
+
+      options.compact
+    end
+
+    def currency_options(gateway_options)
+      {currency: gateway_options[:currency]}.compact
+    end
+
+    def test_mode?
+      preferred_test_mode.nil? || preferred_test_mode
+    end
+
+    # Whether the given Spreedly transaction (as returned by #show) can still be
+    # reversed with a void rather than a credit. Overridable.
+    def voidable?(response)
+      transaction = transaction_params(response)
+      return false if transaction.blank?
+      return false unless transaction["succeeded"]
+
+      transaction_type = transaction["transaction_type"].to_s.downcase
+      REVERSAL_TRANSACTION_TYPES.exclude?(transaction_type)
+    end
+
+    def transaction_params(response)
+      return {} unless response.respond_to?(:params) && response.params.is_a?(Hash)
+
+      response.params["transaction"] || response.params
+    end
+  end
+end
