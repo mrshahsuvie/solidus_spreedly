@@ -1,11 +1,12 @@
 # frozen_string_literal: true
 
 SolidusSpreedly.configure do |config|
-  # Spreedly gateways are configured per payment method in the admin
-  # (environment key, access secret, orchestration mode, gateway token, etc.).
+  # Spreedly credentials and routing are configured per payment method in the
+  # Solidus admin (environment key, access secret, orchestration mode, gateway
+  # token / workflow key, optional SCA provider key).
   #
-  # Use this initializer only for store-wide overrides, e.g. swapping the
-  # default gateway class with your own subclass:
+  # This initializer is only for store-wide overrides. For example, to use your
+  # own gateway subclass (e.g. to override the canary `gateway_token_for` hook):
   #
-  # config.default_gateway_class = 'SolidusSpreedly::Gateway'
+  #   config.default_gateway_class = 'MyStore::SpreedlyGateway'
 end

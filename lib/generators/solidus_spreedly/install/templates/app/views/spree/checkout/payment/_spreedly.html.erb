@@ -1,0 +1,32 @@
+<%#
+  Example Spreedly Express checkout integration.
+
+  Solidus extensions don't ship storefront code (storefronts vary too much), so
+  this partial is copied into your app as a starting point. Adapt the markup and
+  styling to your storefront. The companion JS lives at
+  app/assets/javascripts/spree/frontend/solidus_spreedly.js and is keyed off the
+  `data-spreedly-*` attributes below.
+
+  `payment_method` is the SolidusSpreedly::Gateway instance for this option.
+%>
+<fieldset class="spreedly-express"
+          data-spreedly-express
+          data-spreedly-environment-key="<%= payment_method.preferred_environment_key %>"
+          data-spreedly-amount="<%= (@order.total * 100).to_i %>"
+          data-spreedly-company-name="<%= current_store.name %>">
+
+  <%# The Spreedly payment method token captured client-side. This is the only
+      value submitted to Solidus; raw card data never reaches your server. %>
+  <input type="hidden"
+         data-spreedly-token-field
+         name="payment_source[<%= payment_method.id %>][payment_method_token]"
+         id="payment_source_<%= payment_method.id %>_payment_method_token" />
+
+  <p data-spreedly-summary class="spreedly-express__summary"></p>
+
+  <button type="button"
+          class="spreedly-express__trigger"
+          data-spreedly-trigger>
+    <%= t('solidus_spreedly.checkout.enter_payment_details', default: 'Enter payment details') %>
+  </button>
+</fieldset>

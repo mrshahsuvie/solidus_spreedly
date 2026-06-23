@@ -4,6 +4,8 @@
 en:
   solidus_spreedly:
     payment_type: Spreedly
+    checkout:
+      enter_payment_details: Enter payment details
     transaction_states:
       succeeded: Succeeded
       pending: Pending authentication

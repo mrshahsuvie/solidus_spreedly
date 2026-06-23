@@ -2,9 +2,13 @@
 
 module SolidusSpreedly
   class Configuration
-    # Define here the settings for this extension, e.g.:
-    #
-    # attr_accessor :my_setting
+    # The payment method class used by the extension. Override with your own
+    # subclass (e.g. to customize the `gateway_token_for` routing hook).
+    attr_accessor :default_gateway_class
+
+    def initialize
+      @default_gateway_class = "SolidusSpreedly::Gateway"
+    end
   end
 
   class << self
@@ -12,7 +16,7 @@ module SolidusSpreedly
       @configuration ||= Configuration.new
     end
 
-    alias config configuration
+    alias_method :config, :configuration
 
     def configure
       yield configuration

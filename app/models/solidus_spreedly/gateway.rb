@@ -116,6 +116,17 @@ module SolidusSpreedly
       client.show(response_code)
     end
 
+    # Complete a transaction that came back +pending+ (e.g. after a 3DS2
+    # challenge). Transaction-scoped, so it is independent of the orchestration
+    # mode.
+    #
+    # @param response_code [String] the Spreedly transaction token
+    # @param options [Hash] completion context (e.g. :browser_info)
+    # @return [ActiveMerchant::Billing::Response]
+    def complete(response_code, options = {})
+      client.complete(response_code, options)
+    end
+
     # Reverse a transaction before Solidus knows whether it has settled.
     #
     # If the transaction can still be voided we void it; otherwise we issue a
@@ -154,6 +165,19 @@ module SolidusSpreedly
     # arity Solidus uses (source is passed through).
     def payment_profiles_supported?
       true
+    end
+
+    # Called by +Spree::Payment+ (via +create_payment_profile+) on save when
+    # payment profiles are supported.
+    #
+    # Spreedly payment method tokens are captured and retained client-side
+    # (Spreedly Express / iFrame), so there is nothing to create server-side by
+    # default. Overridable for stores that want to retain on demand.
+    #
+    # @param _payment [Spree::Payment]
+    # @return [void]
+    def create_profile(_payment)
+      nil
     end
 
     # Overridable routing hook for :gateway mode.
