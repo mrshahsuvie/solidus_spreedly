@@ -1,0 +1,147 @@
+---
+http_interactions:
+- request:
+    method: post
+    uri: https://core.spreedly.com/v1/payment_methods.json
+    body:
+      encoding: UTF-8
+      string: '{"payment_method":{"credit_card":{"first_name":"John","last_name":"Doe","number":"4111111111111111","verification_value":"123","month":12,"year":2029},"retained":true}}'
+    headers:
+      Accept-Encoding:
+      - gzip;q=1.0,deflate;q=0.6,identity;q=0.3
+      Accept:
+      - application/json
+      User-Agent:
+      - Ruby
+      Host:
+      - core.spreedly.com
+      Authorization:
+      - "<SPREEDLY_BASIC_AUTH>"
+      Content-Type:
+      - application/json
+  response:
+    status:
+      code: 201
+      message: Created
+    headers:
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '1478'
+      Content-Type:
+      - application/json; charset=utf-8
+      Cache-Control:
+      - max-age=0, private, must-revalidate
+      X-Request-Id:
+      - e3a5229e-2d67-43b0-993a-cbafc409a040
+      X-Permitted-Cross-Domain-Policies:
+      - none
+      Etag:
+      - W/"21356508a76fc09cd7f1e7bf5ab91fec"
+      Server:
+      - openresty
+      X-Content-Type-Options:
+      - nosniff
+      Referrer-Policy:
+      - strict-origin-when-cross-origin
+      X-Frame-Options:
+      - SAMEORIGIN
+      X-Xss-Protection:
+      - '0'
+      Accept-Ranges:
+      - bytes
+      Via:
+      - 1.1 varnish, 1.1 varnish
+      Date:
+      - Thu, 25 Jun 2026 09:02:48 GMT
+      X-Served-By:
+      - cache-iad-kiad7000103-IAD, cache-iad-kiad7000103-IAD, cache-bom-vanm7210081-BOM
+      X-Cache:
+      - MISS, MISS, MISS
+      X-Cache-Hits:
+      - 0, 0, 0
+      X-Timer:
+      - S1782378168.928236,VS0,VE419
+      Vary:
+      - Origin
+      Strict-Transport-Security:
+      - max-age=31557600
+    body:
+      encoding: UTF-8
+      string: '{"transaction":{"token":"5TM24KDVGV8TGVYYKTBEVRHC7W","created_at":"2026-06-25T09:02:48Z","updated_at":"2026-06-25T09:02:48Z","succeeded":true,"transaction_type":"AddPaymentMethod","retained":true,"state":"succeeded","message_key":"messages.transaction_succeeded","message":"Succeeded!","payment_method":{"token":"01KVZ08ZRWEP097W559CYGQ7MR","created_at":"2026-06-25T09:02:48.092Z","updated_at":"2026-06-25T09:02:48.092Z","email":null,"data":null,"storage_state":"retained","test":true,"metadata":null,"callback_url":null,"last_successfully_used":null,"last_four_digits":"1111","first_six_digits":"411111","card_type":"visa","first_name":"John","last_name":"Doe","month":12,"year":2029,"address1":null,"address2":null,"city":null,"state":null,"zip":null,"country":null,"phone_number":null,"company":null,"full_name":"John
+        Doe","eligible_for_card_updater":true,"shipping_address1":null,"shipping_address2":null,"shipping_city":null,"shipping_state":null,"shipping_zip":null,"shipping_country":null,"shipping_phone_number":null,"issuer_identification_number":"41111111","click_to_pay":false,"managed":true,"bin_metadata":{"message":"BIN
+        Metadata is available only to Advanced Vault enrolled customers and payment
+        methods. Reach out to your account representative for more details."},"subscribed_to_mastercard_abu":false,"payment_method_type":"credit_card","errors":[],"fingerprint":"77ed9d440de08f530960d1b5b03431efafcb","verification_value":"XXX","number":"XXXX-XXXX-XXXX-1111"}}}'
+  recorded_at: Thu, 25 Jun 2026 09:02:48 GMT
+- request:
+    method: put
+    uri: https://core.spreedly.com/v1/payment_methods/01KVZ08ZRWEP097W559CYGQ7MR/retain.json
+    body:
+      encoding: UTF-8
+      string: ''
+    headers:
+      Authorization:
+      - "<SPREEDLY_BASIC_AUTH>"
+      Content-Type:
+      - application/json
+      Accept:
+      - application/json
+      Connection:
+      - close
+      Accept-Encoding:
+      - gzip;q=1.0,deflate;q=0.6,identity;q=0.3
+      User-Agent:
+      - Ruby
+  response:
+    status:
+      code: 200
+      message: OK
+    headers:
+      Connection:
+      - close
+      Content-Length:
+      - '1465'
+      Content-Type:
+      - application/json; charset=utf-8
+      Cache-Control:
+      - max-age=0, private, must-revalidate
+      X-Request-Id:
+      - af1b3db4-02ff-449a-b41a-e1bf7c85e110
+      X-Permitted-Cross-Domain-Policies:
+      - none
+      Etag:
+      - W/"b1e3b63d46b06b9da7445e168570d6cb"
+      Server:
+      - openresty
+      X-Content-Type-Options:
+      - nosniff
+      Referrer-Policy:
+      - strict-origin-when-cross-origin
+      X-Frame-Options:
+      - SAMEORIGIN
+      X-Xss-Protection:
+      - '0'
+      Accept-Ranges:
+      - bytes
+      Via:
+      - 1.1 varnish, 1.1 varnish
+      Date:
+      - Thu, 25 Jun 2026 09:02:48 GMT
+      X-Served-By:
+      - cache-iad-kcgs7200058-IAD, cache-iad-kcgs7200058-IAD, cache-bom-vanm7210023-BOM
+      X-Cache:
+      - MISS, MISS, MISS
+      X-Cache-Hits:
+      - 0, 0, 0
+      X-Timer:
+      - S1782378169.595754,VS0,VE320
+      Strict-Transport-Security:
+      - max-age=31557600
+    body:
+      encoding: UTF-8
+      string: '{"transaction":{"token":"1EEW3866YQ8KYV22QJYX8TBC2T","created_at":"2026-06-25T09:02:48Z","updated_at":"2026-06-25T09:02:48Z","succeeded":true,"transaction_type":"RetainPaymentMethod","state":"succeeded","message_key":"messages.transaction_succeeded","message":"Succeeded!","payment_method":{"token":"01KVZ08ZRWEP097W559CYGQ7MR","created_at":"2026-06-25T09:02:48.092Z","updated_at":"2026-06-25T09:02:48.092Z","email":null,"data":null,"storage_state":"retained","test":true,"metadata":null,"callback_url":null,"last_successfully_used":null,"last_four_digits":"1111","first_six_digits":"411111","card_type":"visa","first_name":"John","last_name":"Doe","month":12,"year":2029,"address1":null,"address2":null,"city":null,"state":null,"zip":null,"country":null,"phone_number":null,"company":null,"full_name":"John
+        Doe","eligible_for_card_updater":true,"shipping_address1":null,"shipping_address2":null,"shipping_city":null,"shipping_state":null,"shipping_zip":null,"shipping_country":null,"shipping_phone_number":null,"issuer_identification_number":"41111111","click_to_pay":false,"managed":true,"bin_metadata":{"message":"BIN
+        Metadata is available only to Advanced Vault enrolled customers and payment
+        methods. Reach out to your account representative for more details."},"subscribed_to_mastercard_abu":false,"payment_method_type":"credit_card","errors":[],"fingerprint":"77ed9d440de08f530960d1b5b03431efafcb","verification_value":"XXX","number":"XXXX-XXXX-XXXX-1111"}}}'
+  recorded_at: Thu, 25 Jun 2026 09:02:48 GMT
+recorded_with: VCR 6.4.0

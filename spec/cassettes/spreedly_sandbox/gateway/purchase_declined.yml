@@ -1,0 +1,148 @@
+---
+http_interactions:
+- request:
+    method: post
+    uri: https://core.spreedly.com/v1/payment_methods.json
+    body:
+      encoding: UTF-8
+      string: '{"payment_method":{"credit_card":{"first_name":"John","last_name":"Doe","number":"4111111111111111","verification_value":"123","month":12,"year":2029},"retained":true}}'
+    headers:
+      Accept-Encoding:
+      - gzip;q=1.0,deflate;q=0.6,identity;q=0.3
+      Accept:
+      - application/json
+      User-Agent:
+      - Ruby
+      Host:
+      - core.spreedly.com
+      Authorization:
+      - "<SPREEDLY_BASIC_AUTH>"
+      Content-Type:
+      - application/json
+  response:
+    status:
+      code: 201
+      message: Created
+    headers:
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '1478'
+      Content-Type:
+      - application/json; charset=utf-8
+      Cache-Control:
+      - max-age=0, private, must-revalidate
+      X-Request-Id:
+      - 0dba381b-adbd-4014-97e5-1510a58b1833
+      X-Permitted-Cross-Domain-Policies:
+      - none
+      Etag:
+      - W/"abe570dab61d88a035f01d2059cd6eaf"
+      Server:
+      - openresty
+      X-Content-Type-Options:
+      - nosniff
+      Referrer-Policy:
+      - strict-origin-when-cross-origin
+      X-Frame-Options:
+      - SAMEORIGIN
+      X-Xss-Protection:
+      - '0'
+      Accept-Ranges:
+      - bytes
+      Via:
+      - 1.1 varnish, 1.1 varnish
+      Date:
+      - Thu, 25 Jun 2026 09:02:41 GMT
+      X-Served-By:
+      - cache-iad-kiad7000023-IAD, cache-iad-kiad7000106-IAD, cache-bom-vanm7210076-BOM
+      X-Cache:
+      - MISS, MISS, MISS
+      X-Cache-Hits:
+      - 0, 0, 0
+      X-Timer:
+      - S1782378161.472691,VS0,VE441
+      Vary:
+      - Origin
+      Strict-Transport-Security:
+      - max-age=31557600
+    body:
+      encoding: UTF-8
+      string: '{"transaction":{"token":"1DZA98ZDJF9VF8R5M9KPHG828C","created_at":"2026-06-25T09:02:41Z","updated_at":"2026-06-25T09:02:41Z","succeeded":true,"transaction_type":"AddPaymentMethod","retained":true,"state":"succeeded","message_key":"messages.transaction_succeeded","message":"Succeeded!","payment_method":{"token":"01KVZ08SFQCV2J5NZSN6EZ4RPN","created_at":"2026-06-25T09:02:41.655Z","updated_at":"2026-06-25T09:02:41.655Z","email":null,"data":null,"storage_state":"retained","test":true,"metadata":null,"callback_url":null,"last_successfully_used":null,"last_four_digits":"1111","first_six_digits":"411111","card_type":"visa","first_name":"John","last_name":"Doe","month":12,"year":2029,"address1":null,"address2":null,"city":null,"state":null,"zip":null,"country":null,"phone_number":null,"company":null,"full_name":"John
+        Doe","eligible_for_card_updater":true,"shipping_address1":null,"shipping_address2":null,"shipping_city":null,"shipping_state":null,"shipping_zip":null,"shipping_country":null,"shipping_phone_number":null,"issuer_identification_number":"41111111","click_to_pay":false,"managed":true,"bin_metadata":{"message":"BIN
+        Metadata is available only to Advanced Vault enrolled customers and payment
+        methods. Reach out to your account representative for more details."},"subscribed_to_mastercard_abu":false,"payment_method_type":"credit_card","errors":[],"fingerprint":"77ed9d440de08f530960d1b5b03431efafcb","verification_value":"XXX","number":"XXXX-XXXX-XXXX-1111"}}}'
+  recorded_at: Thu, 25 Jun 2026 09:02:41 GMT
+- request:
+    method: post
+    uri: https://core.spreedly.com/v1/gateways/test-gateway-token/purchase.json
+    body:
+      encoding: UTF-8
+      string: '{"transaction":{"payment_method_token":"01KVZ08SFQCV2J5NZSN6EZ4RPN","amount":200000,"currency_code":"USD","order_id":"SPEC-GATEWAY-MAPS-A-GATEWAY-DECLINE-INTO-AN-UNSUCCESSFUL-RESPONSE"}}'
+    headers:
+      Content-Type:
+      - application/json
+      Authorization:
+      - "<SPREEDLY_BASIC_AUTH>"
+      Accept:
+      - application/json
+      Connection:
+      - close
+      Accept-Encoding:
+      - gzip;q=1.0,deflate;q=0.6,identity;q=0.3
+      User-Agent:
+      - Ruby
+  response:
+    status:
+      code: 422
+      message: Unknown Error
+    headers:
+      Connection:
+      - close
+      Content-Length:
+      - '3005'
+      Content-Type:
+      - application/json; charset=utf-8
+      X-Permitted-Cross-Domain-Policies:
+      - none
+      Cache-Control:
+      - no-cache
+      X-Request-Id:
+      - 16001fd2-f4d9-4040-92f0-4879171d0ebe
+      X-Xss-Protection:
+      - '0'
+      Server:
+      - openresty
+      X-Content-Type-Options:
+      - nosniff
+      Referrer-Policy:
+      - strict-origin-when-cross-origin
+      X-Frame-Options:
+      - SAMEORIGIN
+      Accept-Ranges:
+      - bytes
+      Via:
+      - 1.1 varnish, 1.1 varnish
+      Date:
+      - Thu, 25 Jun 2026 09:02:43 GMT
+      X-Served-By:
+      - cache-iad-kiad7000060-IAD, cache-iad-kiad7000167-IAD, cache-bom-vanm7210067-BOM
+      X-Cache:
+      - MISS, MISS, MISS
+      X-Cache-Hits:
+      - 0, 0, 0
+      X-Timer:
+      - S1782378162.196824,VS0,VE1478
+      Strict-Transport-Security:
+      - max-age=31557600
+    body:
+      encoding: UTF-8
+      string: '{"transaction":{"on_test_gateway":true,"created_at":"2026-06-25T09:02:42Z","updated_at":"2026-06-25T09:02:43Z","succeeded":false,"state":"gateway_processing_failed","token":"01KVZ08T6HSMFPWD9SGDNDFNPC","transaction_type":"Purchase","order_id":"SPEC-GATEWAY-MAPS-A-GATEWAY-DECLINE-INTO-AN-UNSUCCESSFUL-RESPONSE","ip":null,"description":null,"email":null,"merchant_name_descriptor":null,"merchant_location_descriptor":null,"merchant_profile_key":null,"gateway_specific_fields":{},"gateway_specific_response_fields":{"braintree":{}},"gateway_transaction_id":"15rvnte8","sub_merchant_key":null,"gateway_latency_ms":881,"warning":null,"application_id":"Spreedly_BT","risk_data":{},"merchant_metadata":{},"customer_data":{},"order_data":{},"workflow_key":null,"protection_parameters":{},"amount":200000,"local_amount":null,"currency_code":"USD","retain_on_success":false,"payment_method_added":false,"smart_routed":false,"stored_credential_initiator":null,"stored_credential_reason_type":null,"stored_credential_alternate_gateway":null,"stored_credential_final_payment":false,"message":"2000
+        Do Not Honor","gateway_token":"test-gateway-token","gateway_type":"braintree","response":{"success":false,"message":"2000
+        Do Not Honor","avs_code":"I","avs_message":"Address not verified.","cvv_code":"M","cvv_message":"","pending":false,"result_unknown":false,"error_code":null,"error_detail":null,"cancelled":false,"fraud_review":null,"created_at":"2026-06-25T09:02:43Z","updated_at":"2026-06-25T09:02:43Z","status":null,"network_transaction_id":""},"shipping_address":{"name":"John
+        Doe","address1":null,"address2":null,"city":null,"state":null,"zip":null,"country":null,"phone_number":null,"email":null,"metadata":null},"api_urls":[{"referencing_transaction":[]},{"failover_transaction":[]}],"attempt_3dsecure":false,"payment_method":{"token":"01KVZ08SFQCV2J5NZSN6EZ4RPN","created_at":"2026-06-25T09:02:41.655Z","updated_at":"2026-06-25T09:02:41.655Z","email":null,"data":null,"storage_state":"retained","test":true,"metadata":null,"callback_url":null,"last_successfully_used":null,"last_four_digits":"1111","first_six_digits":"411111","card_type":"visa","first_name":"John","last_name":"Doe","month":12,"year":2029,"address1":null,"address2":null,"city":null,"state":null,"zip":null,"country":null,"phone_number":null,"company":null,"full_name":"John
+        Doe","eligible_for_card_updater":true,"shipping_address1":null,"shipping_address2":null,"shipping_city":null,"shipping_state":null,"shipping_zip":null,"shipping_country":null,"shipping_phone_number":null,"issuer_identification_number":"41111111","click_to_pay":false,"managed":true,"bin_metadata":{"message":"BIN
+        Metadata is available only to Advanced Vault enrolled customers and payment
+        methods. Reach out to your account representative for more details."},"subscribed_to_mastercard_abu":false,"payment_method_type":"credit_card","errors":[],"fingerprint":"77ed9d440de08f530960d1b5b03431efafcb","verification_value":"XXX","number":"XXXX-XXXX-XXXX-1111"}}}'
+  recorded_at: Thu, 25 Jun 2026 09:02:43 GMT
+recorded_with: VCR 6.4.0

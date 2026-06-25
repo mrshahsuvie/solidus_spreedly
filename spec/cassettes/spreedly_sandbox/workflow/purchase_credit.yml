@@ -1,0 +1,221 @@
+---
+http_interactions:
+- request:
+    method: post
+    uri: https://core.spreedly.com/v1/payment_methods.json
+    body:
+      encoding: UTF-8
+      string: '{"payment_method":{"credit_card":{"first_name":"John","last_name":"Doe","number":"4111111111111111","verification_value":"123","month":12,"year":2029},"retained":true}}'
+    headers:
+      Accept-Encoding:
+      - gzip;q=1.0,deflate;q=0.6,identity;q=0.3
+      Accept:
+      - application/json
+      User-Agent:
+      - Ruby
+      Host:
+      - core.spreedly.com
+      Authorization:
+      - "<SPREEDLY_BASIC_AUTH>"
+      Content-Type:
+      - application/json
+  response:
+    status:
+      code: 201
+      message: Created
+    headers:
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '1478'
+      Content-Type:
+      - application/json; charset=utf-8
+      Cache-Control:
+      - max-age=0, private, must-revalidate
+      X-Request-Id:
+      - 642406cd-b80c-49b5-a6e2-16a33ad0d9b0
+      X-Permitted-Cross-Domain-Policies:
+      - none
+      Etag:
+      - W/"5c93a7e08a07685d5199b037494674cf"
+      Server:
+      - openresty
+      X-Content-Type-Options:
+      - nosniff
+      Referrer-Policy:
+      - strict-origin-when-cross-origin
+      X-Frame-Options:
+      - SAMEORIGIN
+      X-Xss-Protection:
+      - '0'
+      Accept-Ranges:
+      - bytes
+      Via:
+      - 1.1 varnish, 1.1 varnish
+      Date:
+      - Thu, 25 Jun 2026 09:05:41 GMT
+      X-Served-By:
+      - cache-iad-kjyo7100116-IAD, cache-iad-kjyo7100116-IAD, cache-bom-vanm7210071-BOM
+      X-Cache:
+      - MISS, MISS, MISS
+      X-Cache-Hits:
+      - 0, 0, 0
+      X-Timer:
+      - S1782378342.547058,VS0,VE414
+      Vary:
+      - Origin
+      Strict-Transport-Security:
+      - max-age=31557600
+    body:
+      encoding: UTF-8
+      string: '{"transaction":{"token":"4XVH0X5FTC9NPSCR46NVAPB8S1","created_at":"2026-06-25T09:05:41Z","updated_at":"2026-06-25T09:05:41Z","succeeded":true,"transaction_type":"AddPaymentMethod","retained":true,"state":"succeeded","message_key":"messages.transaction_succeeded","message":"Succeeded!","payment_method":{"token":"01KVZ0E9AAXJ16QKTW5FDQSQFP","created_at":"2026-06-25T09:05:41.706Z","updated_at":"2026-06-25T09:05:41.706Z","email":null,"data":null,"storage_state":"retained","test":true,"metadata":null,"callback_url":null,"last_successfully_used":null,"last_four_digits":"1111","first_six_digits":"411111","card_type":"visa","first_name":"John","last_name":"Doe","month":12,"year":2029,"address1":null,"address2":null,"city":null,"state":null,"zip":null,"country":null,"phone_number":null,"company":null,"full_name":"John
+        Doe","eligible_for_card_updater":true,"shipping_address1":null,"shipping_address2":null,"shipping_city":null,"shipping_state":null,"shipping_zip":null,"shipping_country":null,"shipping_phone_number":null,"issuer_identification_number":"41111111","click_to_pay":false,"managed":true,"bin_metadata":{"message":"BIN
+        Metadata is available only to Advanced Vault enrolled customers and payment
+        methods. Reach out to your account representative for more details."},"subscribed_to_mastercard_abu":false,"payment_method_type":"credit_card","errors":[],"fingerprint":"77ed9d440de08f530960d1b5b03431efafcb","verification_value":"XXX","number":"XXXX-XXXX-XXXX-1111"}}}'
+  recorded_at: Thu, 25 Jun 2026 09:05:42 GMT
+- request:
+    method: post
+    uri: https://core.spreedly.com/v1/transactions/purchase.json
+    body:
+      encoding: UTF-8
+      string: '{"transaction":{"payment_method_token":"01KVZ0E9AAXJ16QKTW5FDQSQFP","amount":1000,"currency_code":"USD","order_id":"SPEC-WORKFLOW-PURCHASES-THROUGH-THE-WORKFLOW-THEN-REFUNDS-TRANSACTION-SCOPED","workflow_key":"test-workflow-key"}}'
+    headers:
+      Content-Type:
+      - application/json
+      Authorization:
+      - "<SPREEDLY_BASIC_AUTH>"
+      Accept:
+      - application/json
+      Connection:
+      - close
+      Accept-Encoding:
+      - gzip;q=1.0,deflate;q=0.6,identity;q=0.3
+      User-Agent:
+      - Ruby
+  response:
+    status:
+      code: 200
+      message: OK
+    headers:
+      Connection:
+      - close
+      Content-Length:
+      - '4433'
+      Content-Type:
+      - application/json; charset=utf-8
+      Cache-Control:
+      - max-age=0, private, must-revalidate
+      X-Request-Id:
+      - 20032bd0-da06-442b-a09d-f1c1d48e7ed7
+      X-Permitted-Cross-Domain-Policies:
+      - none
+      Etag:
+      - W/"24c6c5de4b17bb488afaaa5f1d7057b6"
+      Server:
+      - openresty
+      X-Content-Type-Options:
+      - nosniff
+      Referrer-Policy:
+      - strict-origin-when-cross-origin
+      X-Frame-Options:
+      - SAMEORIGIN
+      X-Xss-Protection:
+      - '0'
+      Accept-Ranges:
+      - bytes
+      Via:
+      - 1.1 varnish, 1.1 varnish
+      Date:
+      - Thu, 25 Jun 2026 09:05:44 GMT
+      X-Served-By:
+      - cache-iad-kcgs7200095-IAD, cache-iad-kcgs7200100-IAD, cache-bom-vanm7210038-BOM
+      X-Cache:
+      - MISS, MISS, MISS
+      X-Cache-Hits:
+      - 0, 0, 0
+      X-Timer:
+      - S1782378342.409202,VS0,VE2022
+      Strict-Transport-Security:
+      - max-age=31557600
+    body:
+      encoding: UTF-8
+      string: '{"transaction":{"on_test_gateway":true,"created_at":"2026-06-25T09:05:42Z","updated_at":"2026-06-25T09:05:44Z","succeeded":true,"state":"succeeded","token":"01KVZ0EA75DVWQC79MSN8PK1Q2","transaction_type":"Purchase","order_id":"SPEC-WORKFLOW-PURCHASES-THROUGH-THE-WORKFLOW-THEN-REFUNDS-TRANSACTION-SCOPED","ip":null,"description":null,"email":null,"merchant_name_descriptor":null,"merchant_location_descriptor":null,"merchant_profile_key":null,"gateway_specific_fields":{},"gateway_specific_response_fields":{"stripe_payment_intents":{"stripe_payment_method_token":"pm_1Tm9EAElWWNZ1kJo6vmOYDt9","stripe_should_retry":"false","three_d_secure_usage_supported":true,"outcome_network_status":"approved_by_network","outcome_risk_level":"normal","outcome_seller_message":"Payment
+        complete.","outcome_type":"authorized","data_id":"ch_3Tm9EBElWWNZ1kJo1ekVl3CU","data_balance_transaction":{"id":"txn_3Tm9EBElWWNZ1kJo17xKUovd","object":"balance_transaction","amount":1000,"available_on":1782691200,"balance_type":"payments","created":1782378343,"currency":"usd","description":null,"exchange_rate":null,"fee":59,"fee_details":[{"amount":59,"application":null,"currency":"usd","description":"Stripe
+        processing fees","type":"stripe_fee"}],"net":941,"reporting_category":"charge","source":"ch_3Tm9EBElWWNZ1kJo1ekVl3CU","status":"pending","type":"charge"},"data_balance_transaction_id":"txn_3Tm9EBElWWNZ1kJo17xKUovd","client_secret":"pi_3Tm9EBElWWNZ1kJo1ayoZGlV_secret_1zDCGDWZGmM3OPzaQ0paQGaAh","authorization_code":"295884","network":"visa","extended_authorization":"disabled","cvc_check":"pass","amount_capturable":0,"amount_received":1000,"card_funding":"credit","network_transaction_id":"105651131161011","issuer_country_code":"US","network_token":{"used":false},"multicapture":{"status":"unavailable"},"apm_type_used":"card"}},"gateway_transaction_id":"pi_3Tm9EBElWWNZ1kJo1ayoZGlV","sub_merchant_key":null,"gateway_latency_ms":1292,"warning":null,"application_id":null,"risk_data":{},"merchant_metadata":{},"customer_data":{},"order_data":{},"workflow_key":"test-workflow-key","protection_parameters":{},"gateway_response":{},"workflow_version":"6","amount":1000,"local_amount":1000,"currency_code":"USD","retain_on_success":false,"payment_method_added":false,"smart_routed":false,"stored_credential_initiator":null,"stored_credential_reason_type":null,"stored_credential_alternate_gateway":null,"stored_credential_final_payment":false,"message_key":"messages.transaction_succeeded","message":"Succeeded!","gateway_token":"test-stripe-gateway-token","gateway_type":"stripe_payment_intents","response":{"success":true,"message":"Transaction
+        approved","avs_code":null,"avs_message":null,"cvv_code":"M","cvv_message":"CVV
+        matches","pending":false,"result_unknown":false,"error_code":null,"error_detail":null,"cancelled":false,"fraud_review":null,"created_at":"2026-06-25T09:05:44Z","updated_at":"2026-06-25T09:05:44Z","status":null,"network_transaction_id":"105651131161011"},"shipping_address":{"name":"John
+        Doe","address1":null,"address2":null,"city":null,"state":null,"zip":null,"country":null,"phone_number":null,"email":null,"metadata":null},"api_urls":[{"referencing_transaction":[]},{"failover_transaction":[]}],"attempt_3dsecure":false,"payment_method":{"token":"01KVZ0E9AAXJ16QKTW5FDQSQFP","created_at":"2026-06-25T09:05:41.706Z","updated_at":"2026-06-25T09:05:41.706Z","email":null,"data":null,"storage_state":"retained","test":true,"metadata":null,"callback_url":null,"last_successfully_used":null,"last_four_digits":"1111","first_six_digits":"411111","card_type":"visa","first_name":"John","last_name":"Doe","month":12,"year":2029,"address1":null,"address2":null,"city":null,"state":null,"zip":null,"country":null,"phone_number":null,"company":null,"full_name":"John
+        Doe","eligible_for_card_updater":true,"shipping_address1":null,"shipping_address2":null,"shipping_city":null,"shipping_state":null,"shipping_zip":null,"shipping_country":null,"shipping_phone_number":null,"issuer_identification_number":"41111111","click_to_pay":false,"managed":true,"bin_metadata":{"message":"BIN
+        Metadata is available only to Advanced Vault enrolled customers and payment
+        methods. Reach out to your account representative for more details."},"subscribed_to_mastercard_abu":false,"payment_method_type":"credit_card","errors":[],"fingerprint":"77ed9d440de08f530960d1b5b03431efafcb","verification_value":"XXX","number":"XXXX-XXXX-XXXX-1111"}}}'
+  recorded_at: Thu, 25 Jun 2026 09:05:44 GMT
+- request:
+    method: post
+    uri: https://core.spreedly.com/v1/transactions/01KVZ0EA75DVWQC79MSN8PK1Q2/credit.json
+    body:
+      encoding: UTF-8
+      string: '{"transaction":{"amount":1000,"currency_code":"USD"}}'
+    headers:
+      Content-Type:
+      - application/json
+      Authorization:
+      - "<SPREEDLY_BASIC_AUTH>"
+      Accept:
+      - application/json
+      Connection:
+      - close
+      Accept-Encoding:
+      - gzip;q=1.0,deflate;q=0.6,identity;q=0.3
+      User-Agent:
+      - Ruby
+  response:
+    status:
+      code: 200
+      message: OK
+    headers:
+      Connection:
+      - close
+      Content-Length:
+      - '1673'
+      Content-Type:
+      - application/json; charset=utf-8
+      Cache-Control:
+      - max-age=0, private, must-revalidate
+      X-Request-Id:
+      - 1cfd8316-b352-4c49-9c4c-948a1d867d4e
+      X-Permitted-Cross-Domain-Policies:
+      - none
+      Etag:
+      - W/"2126d51ed4345d6389079a3641733050"
+      Server:
+      - openresty
+      X-Content-Type-Options:
+      - nosniff
+      Referrer-Policy:
+      - strict-origin-when-cross-origin
+      X-Frame-Options:
+      - SAMEORIGIN
+      X-Xss-Protection:
+      - '0'
+      Accept-Ranges:
+      - bytes
+      Via:
+      - 1.1 varnish, 1.1 varnish
+      Date:
+      - Thu, 25 Jun 2026 09:05:46 GMT
+      X-Served-By:
+      - cache-iad-kiad7000045-IAD, cache-iad-kiad7000056-IAD, cache-bom-vanm7210038-BOM
+      X-Cache:
+      - MISS, MISS, MISS
+      X-Cache-Hits:
+      - 0, 0, 0
+      X-Timer:
+      - S1782378345.738000,VS0,VE1886
+      Strict-Transport-Security:
+      - max-age=31557600
+    body:
+      encoding: UTF-8
+      string: '{"transaction":{"on_test_gateway":true,"created_at":"2026-06-25T09:05:44Z","updated_at":"2026-06-25T09:05:46Z","succeeded":true,"state":"succeeded","token":"01KVZ0ECEXEC586JFEMQ2S24GA","transaction_type":"Credit","order_id":null,"ip":null,"description":null,"email":null,"merchant_name_descriptor":null,"merchant_location_descriptor":null,"merchant_profile_key":null,"gateway_specific_fields":{},"gateway_specific_response_fields":{"stripe_payment_intents":{"stripe_should_retry":"false","data_id":"re_3Tm9EBElWWNZ1kJo1IudW44l","data_balance_transaction":"txn_3Tm9EBElWWNZ1kJo1fdKc968","data_balance_transaction_id":"txn_3Tm9EBElWWNZ1kJo1fdKc968","cvc_check":"pass"}},"gateway_transaction_id":"re_3Tm9EBElWWNZ1kJo1IudW44l","sub_merchant_key":null,"gateway_latency_ms":1183,"warning":null,"application_id":null,"risk_data":{},"merchant_metadata":{},"customer_data":{},"order_data":{},"workflow_key":null,"amount":1000,"local_amount":1000,"currency_code":"USD","message_key":"messages.transaction_succeeded","message":"Succeeded!","gateway_token":"test-stripe-gateway-token","gateway_type":"stripe_payment_intents","response":{"success":true,"message":"Transaction
+        approved","avs_code":null,"avs_message":null,"cvv_code":null,"cvv_message":null,"pending":false,"result_unknown":false,"error_code":null,"error_detail":null,"cancelled":false,"fraud_review":null,"created_at":"2026-06-25T09:05:46Z","updated_at":"2026-06-25T09:05:46Z","status":null},"shipping_address":{"name":null,"address1":null,"address2":null,"city":null,"state":null,"zip":null,"country":null,"phone_number":null,"email":null,"metadata":null},"api_urls":[],"reference_token":"01KVZ0EA75DVWQC79MSN8PK1Q2"}}'
+  recorded_at: Thu, 25 Jun 2026 09:05:46 GMT
+recorded_with: VCR 6.4.0

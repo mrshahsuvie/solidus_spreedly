@@ -1,0 +1,144 @@
+---
+http_interactions:
+- request:
+    method: post
+    uri: https://core.spreedly.com/v1/payment_methods.json
+    body:
+      encoding: UTF-8
+      string: '{"payment_method":{"credit_card":{"first_name":"John","last_name":"Doe","number":"4556761029983886","verification_value":"123","month":10,"year":2029},"retained":true}}'
+    headers:
+      Accept-Encoding:
+      - gzip;q=1.0,deflate;q=0.6,identity;q=0.3
+      Accept:
+      - application/json
+      User-Agent:
+      - Ruby
+      Host:
+      - core.spreedly.com
+      Authorization:
+      - "<SPREEDLY_BASIC_AUTH>"
+      Content-Type:
+      - application/json
+  response:
+    status:
+      code: 201
+      message: Created
+    headers:
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '1478'
+      Content-Type:
+      - application/json; charset=utf-8
+      Cache-Control:
+      - max-age=0, private, must-revalidate
+      X-Request-Id:
+      - 2f300d47-9390-4047-b814-c1317580b283
+      X-Permitted-Cross-Domain-Policies:
+      - none
+      Etag:
+      - W/"feb8204d2fc71563e983154e3f96ba64"
+      Server:
+      - openresty
+      X-Content-Type-Options:
+      - nosniff
+      Referrer-Policy:
+      - strict-origin-when-cross-origin
+      X-Frame-Options:
+      - SAMEORIGIN
+      X-Xss-Protection:
+      - '0'
+      Accept-Ranges:
+      - bytes
+      Via:
+      - 1.1 varnish, 1.1 varnish
+      Date:
+      - Thu, 25 Jun 2026 14:19:10 GMT
+      X-Served-By:
+      - cache-iad-kcgs7200179-IAD, cache-iad-kcgs7200090-IAD, cache-bom-vanm7210052-BOM
+      X-Cache:
+      - MISS, MISS, MISS
+      X-Cache-Hits:
+      - 0, 0, 0
+      X-Timer:
+      - S1782397150.289016,VS0,VE389
+      Vary:
+      - Origin
+      Strict-Transport-Security:
+      - max-age=31557600
+    body:
+      encoding: UTF-8
+      string: '{"transaction":{"token":"29RKNGAY609CQAEWA7T3YZE5T4","created_at":"2026-06-25T14:19:10Z","updated_at":"2026-06-25T14:19:10Z","succeeded":true,"transaction_type":"AddPaymentMethod","retained":true,"state":"succeeded","message_key":"messages.transaction_succeeded","message":"Succeeded!","payment_method":{"token":"01KVZJC98BK1REP8SXYX3RGEVF","created_at":"2026-06-25T14:19:10.475Z","updated_at":"2026-06-25T14:19:10.475Z","email":null,"data":null,"storage_state":"retained","test":true,"metadata":null,"callback_url":null,"last_successfully_used":null,"last_four_digits":"3886","first_six_digits":"455676","card_type":"visa","first_name":"John","last_name":"Doe","month":10,"year":2029,"address1":null,"address2":null,"city":null,"state":null,"zip":null,"country":null,"phone_number":null,"company":null,"full_name":"John
+        Doe","eligible_for_card_updater":true,"shipping_address1":null,"shipping_address2":null,"shipping_city":null,"shipping_state":null,"shipping_zip":null,"shipping_country":null,"shipping_phone_number":null,"issuer_identification_number":"45567610","click_to_pay":false,"managed":true,"bin_metadata":{"message":"BIN
+        Metadata is available only to Advanced Vault enrolled customers and payment
+        methods. Reach out to your account representative for more details."},"subscribed_to_mastercard_abu":false,"payment_method_type":"credit_card","errors":[],"fingerprint":"fcbed33cc09f6422715edd2ebcbf67b7abfe","verification_value":"XXX","number":"XXXX-XXXX-XXXX-3886"}}}'
+  recorded_at: Thu, 25 Jun 2026 14:19:10 GMT
+- request:
+    method: post
+    uri: https://core.spreedly.com/v1/gateways/test-stripe-gateway-token/purchase.json
+    body:
+      encoding: UTF-8
+      string: '{"transaction":{"payment_method_token":"01KVZJC98BK1REP8SXYX3RGEVF","amount":3004,"currency_code":"USD","order_id":"R249276304-AHNEZ7F4","email":"email8@example.com","sca_provider_key":"test-stripe-gateway-token","attempt_3dsecure":true}}'
+    headers:
+      Content-Type:
+      - application/json
+      Authorization:
+      - "<SPREEDLY_BASIC_AUTH>"
+      Accept:
+      - application/json
+      Connection:
+      - close
+      Accept-Encoding:
+      - gzip;q=1.0,deflate;q=0.6,identity;q=0.3
+      User-Agent:
+      - Ruby
+  response:
+    status:
+      code: 422
+      message: Unknown Error
+    headers:
+      Connection:
+      - close
+      Content-Length:
+      - '342'
+      Content-Type:
+      - application/json; charset=utf-8
+      X-Permitted-Cross-Domain-Policies:
+      - none
+      Cache-Control:
+      - no-cache
+      X-Request-Id:
+      - edbc76dd-af35-4f60-8867-b8650d15e68d
+      X-Xss-Protection:
+      - '0'
+      Server:
+      - openresty
+      X-Content-Type-Options:
+      - nosniff
+      Referrer-Policy:
+      - strict-origin-when-cross-origin
+      X-Frame-Options:
+      - SAMEORIGIN
+      Accept-Ranges:
+      - bytes
+      Via:
+      - 1.1 varnish, 1.1 varnish
+      Date:
+      - Thu, 25 Jun 2026 14:19:11 GMT
+      X-Served-By:
+      - cache-iad-kiad7000121-IAD, cache-iad-kiad7000121-IAD, cache-bom-vanm7210046-BOM
+      X-Cache:
+      - MISS, MISS, MISS
+      X-Cache-Hits:
+      - 0, 0, 0
+      X-Timer:
+      - S1782397151.490084,VS0,VE403
+      Strict-Transport-Security:
+      - max-age=31557600
+    body:
+      encoding: UTF-8
+      string: '{"errors":[{"attribute":"attempt_3dsecure","key":"errors.unsupported_flag_with_spreedly_3ds_authentication","message":"Attempt
+        3dsecure flag not supported when attempting Spreedly 3DS authentication."},{"attribute":"sca_provider_key","key":"errors.sca_provider_not_found","message":"Sca
+        provider key Unable to find the sca_provider given."}]}'
+  recorded_at: Thu, 25 Jun 2026 14:19:12 GMT
+recorded_with: VCR 6.4.0

@@ -69,6 +69,71 @@ RSpec.describe SolidusSpreedly::Client do
         expect(response.test).to be(true)
       end
 
+      it "can route a purchase through an explicit Stripe gateway token with 3DS callback fields" do
+        stub = stub_request(:post, "#{base_url}/gateways/STRIPE_GATEWAY/purchase.json")
+          .with(
+            body: {
+              transaction: {
+                payment_method_token: payment_method_token,
+                amount: 1000,
+                currency_code: "USD",
+                sca_provider_key: "SCA1",
+                attempt_3dsecure: true,
+                redirect_url: "https://example.com/return",
+                callback_url: "https://example.com/callback"
+              }
+            }
+          )
+          .to_return(status: 200, body: succeeded_body(state: "pending"))
+
+        response = client.purchase(
+          1000,
+          payment_method_token,
+          currency: "USD",
+          gateway_token: "STRIPE_GATEWAY",
+          sca_provider_key: "SCA1",
+          redirect_url: "https://example.com/return",
+          callback_url: "https://example.com/callback"
+        )
+
+        expect(stub).to have_been_requested
+        expect(response).not_to be_success
+        expect(response.params.dig("transaction", "state")).to eq("pending")
+      end
+
+      it "passes Braintree gateway-specific fields through the transaction body" do
+        stub = stub_request(:post, "#{base_url}/gateways/GATEWAY123/purchase.json")
+          .with(
+            body: {
+              transaction: {
+                payment_method_token: payment_method_token,
+                amount: 1000,
+                currency_code: "USD",
+                gateway_specific_fields: {
+                  braintree: {
+                    transaction_source: "recurring"
+                  }
+                }
+              }
+            }
+          )
+          .to_return(status: 200, body: succeeded_body)
+
+        response = client.purchase(
+          1000,
+          payment_method_token,
+          currency: "USD",
+          gateway_specific_fields: {
+            braintree: {
+              transaction_source: "recurring"
+            }
+          }
+        )
+
+        expect(stub).to have_been_requested
+        expect(response).to be_success
+      end
+
       it "raises when no gateway_token is configured" do
         tokenless = described_class.new(login: "env-key", password: "access-secret")
 
@@ -99,6 +164,33 @@ RSpec.describe SolidusSpreedly::Client do
           orchestration_mode: :workflow,
           workflow_key: "WF999"
         )
+
+        expect(stub).to have_been_requested
+        expect(response).to be_success
+      end
+
+      it "uses workflow mode and workflow_key configured on the client" do
+        workflow_client = described_class.new(
+          login: "env-key",
+          password: "access-secret",
+          orchestration_mode: :workflow,
+          workflow_key: "WF999"
+        )
+
+        stub = stub_request(:post, "#{base_url}/transactions/purchase.json")
+          .with(
+            body: {
+              transaction: {
+                payment_method_token: payment_method_token,
+                amount: 1000,
+                currency_code: "USD",
+                workflow_key: "WF999"
+              }
+            }
+          )
+          .to_return(status: 200, body: succeeded_body)
+
+        response = workflow_client.purchase(1000, payment_method_token, currency: "USD")
 
         expect(stub).to have_been_requested
         expect(response).to be_success
