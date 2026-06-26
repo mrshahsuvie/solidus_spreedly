@@ -40,6 +40,39 @@ RSpec.describe SolidusSpreedly::Client do
     }.to_json
   end
 
+  def add_payment_method_body(token: "PMT123", transaction_token: "TXNADD123")
+    {
+      transaction: {
+        token: transaction_token,
+        succeeded: true,
+        state: "succeeded",
+        transaction_type: "AddPaymentMethod",
+        message: "Succeeded!",
+        on_test_gateway: true,
+        payment_method: {
+          token: token,
+          storage_state: "retained",
+          payment_method_type: "credit_card",
+          last_four_digits: "1111",
+          card_type: "visa"
+        }
+      }
+    }.to_json
+  end
+
+  def add_payment_method_failed_body
+    {
+      transaction: {
+        token: "TXNFAIL",
+        succeeded: false,
+        state: "failed",
+        transaction_type: "AddPaymentMethod",
+        message: "Unable to process the payment method.",
+        errors: [{key: "errors.invalid", message: "Credit card number is invalid"}]
+      }
+    }.to_json
+  end
+
   describe "#purchase" do
     context "in :gateway mode (default)" do
       it "POSTs to the gateway-scoped purchase endpoint with a transaction body" do
@@ -327,6 +360,97 @@ RSpec.describe SolidusSpreedly::Client do
 
       expect(stub).to have_been_requested
       expect(response).to be_success
+    end
+  end
+
+  describe "#create_payment_method / #add_payment_method" do
+    let(:credit_card) do
+      {
+        first_name: "John",
+        last_name: "Doe",
+        number: "4111111111111111",
+        verification_value: "123",
+        month: 12,
+        year: 2029
+      }
+    end
+
+    it "POSTs to the payment_methods endpoint with a retained credit card" do
+      stub = stub_request(:post, "#{base_url}/payment_methods.json")
+        .with(
+          headers: {
+            "Authorization" => "Basic #{Base64.strict_encode64("env-key:access-secret")}",
+            "Content-Type" => "application/json"
+          },
+          body: {
+            payment_method: {
+              credit_card: credit_card,
+              retained: true
+            }
+          }
+        )
+        .to_return(status: 201, body: add_payment_method_body)
+
+      response = client.create_payment_method(credit_card: credit_card)
+
+      expect(stub).to have_been_requested
+      expect(response).to be_success
+      expect(response.authorization).to eq("PMT123")
+      expect(response.params.dig("transaction", "transaction_type")).to eq("AddPaymentMethod")
+    end
+
+    it "creates a non-retained payment method when retain: false" do
+      stub = stub_request(:post, "#{base_url}/payment_methods.json")
+        .with(
+          body: {
+            payment_method: {
+              credit_card: credit_card,
+              retained: false
+            }
+          }
+        )
+        .to_return(status: 201, body: add_payment_method_body)
+
+      response = client.add_payment_method(credit_card: credit_card, retain: false)
+
+      expect(stub).to have_been_requested
+      expect(response).to be_success
+    end
+
+    it "accepts a full payment_method payload" do
+      stub = stub_request(:post, "#{base_url}/payment_methods.json")
+        .with(
+          body: {
+            payment_method: {
+              credit_card: credit_card,
+              retained: true,
+              email: "buyer@example.com"
+            }
+          }
+        )
+        .to_return(status: 201, body: add_payment_method_body)
+
+      response = client.create_payment_method(
+        payment_method: {credit_card: credit_card, email: "buyer@example.com"}
+      )
+
+      expect(stub).to have_been_requested
+      expect(response).to be_success
+    end
+
+    it "maps validation failures into an unsuccessful response" do
+      stub_request(:post, "#{base_url}/payment_methods.json")
+        .to_return(status: 422, body: add_payment_method_failed_body)
+
+      response = client.create_payment_method(credit_card: credit_card)
+
+      expect(response).not_to be_success
+      expect(response.message).to eq("Unable to process the payment method.")
+    end
+
+    it "raises when no payment method attributes are supplied" do
+      expect { client.create_payment_method }
+        .to raise_error(ArgumentError, /credit_card, bank_account, or payment_method is required/)
     end
   end
 

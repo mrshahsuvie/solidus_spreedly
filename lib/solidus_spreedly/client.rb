@@ -108,6 +108,25 @@ module SolidusSpreedly
 
     alias_method :find, :show
 
+    # Public: Create a payment method in Spreedly (AddPaymentMethod).
+    #
+    # Vaults card or bank-account details in Spreedly and returns a reusable
+    # payment method token in +response.authorization+.
+    #
+    # options - A hash describing the payment method:
+    #           :credit_card  - Hash of card attributes (number, month, year, ...).
+    #           :bank_account - Hash of bank-account attributes.
+    #           :payment_method - Full payment_method payload (overrides the above).
+    #           :retain       - Whether to retain in the vault (default: true).
+    #           :email, :data - Optional metadata fields.
+    #
+    # @return [ActiveMerchant::Billing::Response]
+    def create_payment_method(options = {})
+      commit(:post, "payment_methods.json", build_payment_method_body(options))
+    end
+
+    alias_method :add_payment_method, :create_payment_method
+
     # Public: Retain (vault) a payment method so it can be reused.
     #
     # payment_method_token - The Spreedly payment method token to retain.
@@ -197,6 +216,32 @@ module SolidusSpreedly
       transaction.empty? ? nil : {transaction: transaction}
     end
 
+    # Internal: Build the body for POST /payment_methods.json.
+    def build_payment_method_body(options)
+      payment_method =
+        if options[:payment_method].is_a?(Hash)
+          options[:payment_method].dup
+        else
+          build_payment_method_attributes(options)
+        end
+
+      payment_method[:retained] = options.fetch(:retain, true) unless payment_method.key?(:retained)
+      payment_method[:email] = options[:email] if options[:email] && !payment_method.key?(:email)
+      payment_method[:data] = options[:data] if options[:data] && !payment_method.key?(:data)
+
+      {payment_method: payment_method}
+    end
+
+    def build_payment_method_attributes(options)
+      if options[:credit_card].is_a?(Hash)
+        {credit_card: options[:credit_card]}
+      elsif options[:bank_account].is_a?(Hash)
+        {bank_account: options[:bank_account]}
+      else
+        raise ArgumentError, "credit_card, bank_account, or payment_method is required"
+      end
+    end
+
     def add_three_ds(transaction, options)
       transaction[:sca_provider_key] = options[:sca_provider_key] if options[:sca_provider_key]
       transaction[:attempt_3dsecure] = true if options[:sca_provider_key] || options[:attempt_3dsecure]
@@ -273,7 +318,11 @@ module SolidusSpreedly
     end
 
     def authorization_from(transaction)
-      transaction["token"] || transaction.dig("payment_method", "token")
+      if transaction["transaction_type"] == "AddPaymentMethod"
+        transaction.dig("payment_method", "token")
+      else
+        transaction["token"] || transaction.dig("payment_method", "token")
+      end
     end
 
     def error_code_from(transaction)

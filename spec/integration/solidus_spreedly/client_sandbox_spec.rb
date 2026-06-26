@@ -15,6 +15,21 @@ RSpec.describe SolidusSpreedly::Client, :spreedly_sandbox do
   end
 
   describe ":gateway orchestration mode" do
+    describe "#create_payment_method" do
+      it "creates and retains a credit card in the vault",
+        vcr: {cassette_name: "spreedly_sandbox/gateway/create_payment_method"} do
+        response = client.create_payment_method(
+          credit_card: SolidusSpreedly::SpecSupport::Sandbox::TEST_CARD,
+          retain: true
+        )
+
+        expect(response).to be_success
+        expect(response.authorization).to be_present
+        expect(response.params.dig("transaction", "transaction_type")).to eq("AddPaymentMethod")
+        expect(response.params.dig("transaction", "payment_method", "storage_state")).to eq("retained")
+      end
+    end
+
     describe "#purchase" do
       it "authorizes and captures in one call", vcr: {cassette_name: "spreedly_sandbox/gateway/purchase"} do
         token = create_test_payment_method

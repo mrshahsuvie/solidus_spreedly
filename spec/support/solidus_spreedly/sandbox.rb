@@ -1,9 +1,5 @@
 # frozen_string_literal: true
 
-require "net/http"
-require "json"
-require "base64"
-
 module SolidusSpreedly
   module SpecSupport
     # Helpers for the live Spreedly sandbox integration specs.
@@ -29,8 +25,6 @@ module SolidusSpreedly
     # visible instead of being hidden as pending examples.
     module Sandbox
       module_function
-
-      BASE_URL = "https://core.spreedly.com/v1"
 
       # Placeholder values used when replaying cassettes offline. They are
       # URL-safe and must exactly match the filter placeholders in
@@ -121,32 +115,20 @@ module SolidusSpreedly
       #
       # @return [String] the Spreedly payment method token
       def create_test_payment_method(card: {})
-        body = {payment_method: {credit_card: TEST_CARD.merge(card), retained: true}}
-        parsed = post_json("payment_methods.json", body)
-        token = parsed.dig("transaction", "payment_method", "token") || parsed.dig("payment_method", "token")
+        response = client.create_payment_method(
+          credit_card: TEST_CARD.merge(card),
+          retain: true
+        )
 
-        error_keys = Array(parsed["errors"]).map { |error| error["key"] }
+        error_keys = Array(response.params.dig("transaction", "errors")).map { |error| error["key"] }
         if error_keys.include?("errors.access_denied")
           raise "Spreedly authentication failed while recording. Check SPREEDLY_ENVIRONMENT_KEY and SPREEDLY_ACCESS_SECRET; do not commit this cassette."
         end
 
-        raise "Could not mint a Spreedly test payment method: #{parsed.inspect}" if token.to_s.empty?
+        token = response.authorization
+        raise "Could not mint a Spreedly test payment method: #{response.params.inspect}" if token.to_s.empty?
 
         token
-      end
-
-      def post_json(path, body)
-        uri = URI("#{BASE_URL}/#{path}")
-        http = Net::HTTP.new(uri.host, uri.port)
-        http.use_ssl = true
-
-        request = Net::HTTP::Post.new(uri)
-        request["Authorization"] = "Basic #{Base64.strict_encode64("#{environment_key}:#{access_secret}").chomp}"
-        request["Content-Type"] = "application/json"
-        request["Accept"] = "application/json"
-        request.body = body.to_json
-
-        JSON.parse(http.request(request).body)
       end
     end
   end
