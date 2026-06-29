@@ -53,6 +53,7 @@ module SolidusSpreedly
     #                  :orchestration_mode - :gateway (default) or :workflow.
     #                  :gateway_token      - Required in :gateway mode.
     #                  :workflow_key       - Optional in :workflow mode.
+    #                  :transaction_metadata           - Optional hash of transaction metadata.
     def purchase(money, payment_method, options = {})
       commit(:post, transaction_path("purchase", options), build_transaction_body(money, payment_method, options))
     end
@@ -181,6 +182,9 @@ module SolidusSpreedly
       transaction[:email] = options[:email] if options[:email]
       transaction[:description] = options[:description] if options[:description]
       transaction[:retain_on_success] = true if options[:store]
+      if options[:transaction_metadata].is_a?(Hash) && options[:transaction_metadata].any?
+        transaction[:transaction_metadata] = options[:transaction_metadata]
+      end
 
       add_three_ds(transaction, options)
       add_workflow_key(transaction, options)

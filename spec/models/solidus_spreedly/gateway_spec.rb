@@ -85,6 +85,28 @@ RSpec.describe SolidusSpreedly::Gateway do
         gateway.purchase(1000, source, gateway_options)
       end
 
+      it "forwards transaction metadata when provided in gateway_options" do
+        options = gateway_options.merge(transaction_metadata: {canary: "true", migration_phase: "1"})
+
+        expect(client).to receive(:purchase).with(
+          1000,
+          "PMT123",
+          hash_including(transaction_metadata: {canary: "true", migration_phase: "1"})
+        ).and_return(success_response)
+
+        gateway.purchase(1000, source, options)
+      end
+
+      it "omits metadata when gateway_options has none" do
+        expect(client).to receive(:purchase).with(
+          1000,
+          "PMT123",
+          hash_not_including(:transaction_metadata)
+        ).and_return(success_response)
+
+        gateway.purchase(1000, source, gateway_options)
+      end
+
       it "forwards a configured SCA provider key for 3DS2" do
         gateway.preferred_sca_provider_key = "SCA1"
 
@@ -115,6 +137,46 @@ RSpec.describe SolidusSpreedly::Gateway do
 
         gateway.purchase(1000, source, gateway_options)
       end
+
+      it "routes through the overridable workflow_key_for hook" do
+        allow(gateway).to receive(:workflow_key_for).and_return("CANARY_WORKFLOW")
+
+        expect(client).to receive(:purchase).with(
+          1000,
+          "PMT123",
+          hash_including(orchestration_mode: :workflow, workflow_key: "CANARY_WORKFLOW")
+        ).and_return(success_response)
+
+        gateway.purchase(1000, source, gateway_options)
+      end
+    end
+  end
+
+  describe "#routing_options" do
+    it "returns gateway_token in :gateway mode" do
+      expect(gateway.send(:routing_options, source, gateway_options))
+        .to eq(gateway_token: "GATEWAY123")
+    end
+
+    it "returns workflow_key in :workflow mode" do
+      gateway.preferred_orchestration_mode = "workflow"
+      gateway.preferred_workflow_key = "WF999"
+
+      expect(gateway.send(:routing_options, source, gateway_options))
+        .to eq(workflow_key: "WF999")
+    end
+  end
+
+  describe "#transaction_metadata_for" do
+    it "defaults to gateway_options[:transaction_metadata]" do
+      metadata = {canary: "true"}
+
+      expect(gateway.transaction_metadata_for(source, gateway_options.merge(transaction_metadata: metadata)))
+        .to eq(metadata)
+    end
+
+    it "returns an empty hash when metadata is absent" do
+      expect(gateway.transaction_metadata_for(source, gateway_options)).to eq({})
     end
   end
 

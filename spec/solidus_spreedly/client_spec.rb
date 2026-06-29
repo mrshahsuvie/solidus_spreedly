@@ -268,6 +268,31 @@ RSpec.describe SolidusSpreedly::Client do
       expect(response.params.dig("transaction", "state")).to eq("pending")
     end
 
+    it "includes transaction metadata in the request body when provided" do
+      stub = stub_request(:post, "#{base_url}/gateways/GATEWAY123/purchase.json")
+        .with(
+          body: {
+            transaction: {
+              payment_method_token: payment_method_token,
+              amount: 1000,
+              currency_code: "USD",
+              transaction_metadata: {canary: "true", migration_phase: "1"}
+            }
+          }
+        )
+        .to_return(status: 200, body: succeeded_body)
+
+      response = client.purchase(
+        1000,
+        payment_method_token,
+        currency: "USD",
+        transaction_metadata: {canary: "true", migration_phase: "1"}
+      )
+
+      expect(stub).to have_been_requested
+      expect(response).to be_success
+    end
+
     it "maps a gateway failure into an unsuccessful response" do
       stub_request(:post, "#{base_url}/gateways/GATEWAY123/purchase.json")
         .to_return(status: 422, body: failed_body)

@@ -193,6 +193,32 @@ module SolidusSpreedly
       preferred_gateway_token
     end
 
+    # Overridable routing hook for :workflow mode.
+    #
+    # Returns the Spreedly Composer workflow key for a given payment. Defaults
+    # to the configured +workflow_key+ preference; override to select workflows
+    # dynamically (e.g. from order context or routing transaction_metadata).
+    #
+    # @param _source [SolidusSpreedly::Source]
+    # @param _gateway_options [Hash]
+    # @return [String, nil]
+    def workflow_key_for(_source, _gateway_options)
+      preferred_workflow_key
+    end
+
+    # Overridable hook for transaction metadata sent to Spreedly.
+    #
+    # Transaction Metadata is available to Composer workflow rules for routing decisions.
+    # Defaults to the +:transaction_metadata+ entry in +gateway_options+; override to derive
+    # values from the source, order, or payment context.
+    #
+    # @param _source [SolidusSpreedly::Source]
+    # @param gateway_options [Hash]
+    # @return [Hash]
+    def transaction_metadata_for(_source, gateway_options)
+      gateway_options[:transaction_metadata] || {}
+    end
+
     protected
 
     # Solidus calls +gateway+/+gateway_class+ through its default delegation,
@@ -219,8 +245,38 @@ module SolidusSpreedly
       source.respond_to?(:payment_method_token) ? source.payment_method_token : source
     end
 
-    # Build the per-call options for purchase/authorize, threading the
-    # orchestration mode and routing information.
+    # Build orchestration-specific routing options for purchase/authorize.
+    #
+    # In +:gateway+ mode returns +:gateway_token+ from {#gateway_token_for}. In
+    # +:workflow+ mode returns +:workflow_key+ from {#workflow_key_for}.
+    #
+    # @param source [SolidusSpreedly::Source]
+    # @param gateway_options [Hash]
+    # @return [Hash] routing keys to merge into {#transaction_options}
+    def routing_options(source, gateway_options)
+      if orchestration_mode == :workflow
+        {workflow_key: workflow_key_for(source, gateway_options)}.compact
+      else
+        {gateway_token: gateway_token_for(source, gateway_options)}
+      end
+    end
+
+    # Build the per-call options for purchase/authorize.
+    #
+    # Merges common Solidus gateway options with {#routing_options} and optional
+    # 3DS2 / transaction_metadata fields. Supported +gateway_options+ keys:
+    #
+    #   * +:currency+ - ISO currency code
+    #   * +:order_id+ - merchant order reference
+    #   * +:ip+ - buyer IP address
+    #   * +:email+ - buyer email
+    #   * +:browser_info+ - 3DS2 browser fingerprint hash
+    #   * +:transaction_metadata+ - transaction transaction_metadata hash for Spreedly Workflow rules
+    #     (also available via the overridable {#transaction_metadata_for} hook)
+    #
+    # @param source [SolidusSpreedly::Source]
+    # @param gateway_options [Hash]
+    # @return [Hash]
     def transaction_options(source, gateway_options)
       options = {
         orchestration_mode: orchestration_mode,
@@ -228,16 +284,13 @@ module SolidusSpreedly
         order_id: gateway_options[:order_id],
         ip: gateway_options[:ip],
         email: gateway_options[:email]
-      }
-
-      if orchestration_mode == :workflow
-        options[:workflow_key] = preferred_workflow_key
-      else
-        options[:gateway_token] = gateway_token_for(source, gateway_options)
-      end
+      }.merge(routing_options(source, gateway_options))
 
       options[:sca_provider_key] = preferred_sca_provider_key if preferred_sca_provider_key.present?
       options[:browser_info] = gateway_options[:browser_info] if gateway_options[:browser_info]
+
+      transaction_metadata = transaction_metadata_for(source, gateway_options)
+      options[:transaction_metadata] = transaction_metadata if transaction_metadata.present?
 
       options.compact
     end
