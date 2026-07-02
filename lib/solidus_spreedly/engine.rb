@@ -20,7 +20,17 @@ module SolidusSpreedly
         app.config.spree.payment_methods << "SolidusSpreedly::Gateway"
 
         ::Spree::PermittedAttributes.source_attributes.concat(
-          %i[payment_method_token payment_method_type]
+          %i[
+            payment_method_token
+            payment_method_type
+            card_type
+            last_digits
+            month
+            year
+            first_name
+            last_name
+            email
+          ]
         ).uniq!
       end
     end

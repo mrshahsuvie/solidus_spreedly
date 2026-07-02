@@ -1,0 +1,53 @@
+<fieldset data-hook="spreedly_payment_source">
+  <legend align="center"><%= SolidusSpreedly::Gateway.model_name.human %></legend>
+
+  <div class="row">
+    <div class="col-4">
+      <dl>
+        <dt><%= t("spree.identifier") %>:</dt>
+        <dd><%= payment.number %></dd>
+
+        <dt><%= t("spree.response_code") %>:</dt>
+        <dd><%= payment.response_code %></dd>
+
+        <dt><%= SolidusSpreedly::Source.human_attribute_name(:payment_method_token) %>:</dt>
+        <dd><%= payment.source.payment_method_token %></dd>
+
+        <% if payment.source.payment_method_type.present? %>
+          <dt><%= SolidusSpreedly::Source.human_attribute_name(:payment_method_type) %>:</dt>
+          <dd><%= payment.source.payment_method_type %></dd>
+        <% end %>
+      </dl>
+    </div>
+
+    <div class="col-4">
+      <dl>
+        <% if payment.source.last_digits.present? %>
+          <dt><%= SolidusSpreedly::Source.human_attribute_name(:last_digits) %>:</dt>
+          <dd><%= payment.source.display_number %></dd>
+        <% end %>
+
+        <% if payment.source.card_type.present? %>
+          <dt><%= SolidusSpreedly::Source.human_attribute_name(:card_type) %>:</dt>
+          <dd><%= payment.source.card_type %></dd>
+        <% end %>
+
+        <% if payment.source.month.present? && payment.source.year.present? %>
+          <dt><%= Spree::CreditCard.human_attribute_name(:expiration) %>:</dt>
+          <dd><%= payment.source.month %>/<%= payment.source.year %></dd>
+        <% end %>
+      </dl>
+    </div>
+
+    <div class="col-4">
+      <dl>
+        <dt><%= t("spree.status") %>:</dt>
+        <dd>
+          <span class="pill pill-<%= payment.state %>">
+            <%= t(payment.state, scope: "spree.payment_states") %>
+          </span>
+        </dd>
+      </dl>
+    </div>
+  </div>
+</fieldset>

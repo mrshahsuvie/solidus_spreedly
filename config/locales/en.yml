@@ -7,6 +7,8 @@ en:
       solidus_spreedly/gateway: Spreedly
   solidus_spreedly:
     payment_type: Spreedly
+    admin:
+      no_saved_payment_methods: No saved payment methods
     checkout:
       enter_payment_details: Enter payment details
     transaction_states:
