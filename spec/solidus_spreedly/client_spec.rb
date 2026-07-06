@@ -35,7 +35,31 @@ RSpec.describe SolidusSpreedly::Client do
         succeeded: false,
         state: "gateway_processing_failed",
         message: "Unable to process the purchase transaction.",
-        response: {avs_code: nil, cvv_code: nil}
+        response: {
+          success: false,
+          message: "Unable to process the purchase transaction.",
+          error_code: "processor_declined",
+          avs_code: nil,
+          cvv_code: nil
+        }
+      }
+    }.to_json
+  end
+
+  def stripe_declined_body
+    {
+      transaction: {
+        token: "TXNDECLINED",
+        succeeded: false,
+        state: "gateway_processing_failed",
+        message: "Your card was declined.",
+        response: {
+          success: false,
+          message: "Your card was declined.",
+          error_code: "card_declined",
+          avs_code: nil,
+          cvv_code: nil
+        }
       }
     }.to_json
   end
@@ -301,6 +325,18 @@ RSpec.describe SolidusSpreedly::Client do
 
       expect(response).not_to be_success
       expect(response.message).to eq("Unable to process the purchase transaction.")
+      expect(response.error_code).to eq("processor_declined")
+    end
+
+    it "maps a Stripe-style gateway decline using nested response fields" do
+      stub_request(:post, "#{base_url}/gateways/GATEWAY123/purchase.json")
+        .to_return(status: 200, body: stripe_declined_body)
+
+      response = client.purchase(1000, payment_method_token, currency: "USD")
+
+      expect(response).not_to be_success
+      expect(response.message).to eq("Your card was declined.")
+      expect(response.error_code).to eq("card_declined")
     end
   end
 

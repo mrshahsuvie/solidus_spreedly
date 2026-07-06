@@ -315,8 +315,16 @@ module SolidusSpreedly
       transaction["succeeded"] == true && transaction["state"] != PENDING_STATE
     end
 
+    def gateway_response_from(transaction)
+      response = transaction["response"]
+      response.is_a?(Hash) ? response : {}
+    end
+
     def message_from(transaction)
-      transaction["message"] ||
+      gateway_response = gateway_response_from(transaction)
+
+      gateway_response["message"].presence ||
+        transaction["message"].presence ||
         Array(transaction["errors"]).map { |e| e["message"] }.compact.join(", ").presence ||
         transaction["state"]
     end
@@ -332,7 +340,11 @@ module SolidusSpreedly
     def error_code_from(transaction)
       return if success_from(transaction)
 
-      Array(transaction["errors"]).map { |e| e["key"] }.compact.join(", ").presence || transaction["state"]
+      gateway_response = gateway_response_from(transaction)
+
+      gateway_response["error_code"].presence ||
+        Array(transaction["errors"]).map { |e| e["key"] }.compact.join(", ").presence ||
+        transaction["state"]
     end
 
     def headers
