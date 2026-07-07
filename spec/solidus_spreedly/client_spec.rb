@@ -191,6 +191,26 @@ RSpec.describe SolidusSpreedly::Client do
         expect(response).to be_success
       end
 
+      it "includes retain_on_success when store: true" do
+        stub = stub_request(:post, "#{base_url}/gateways/GATEWAY123/purchase.json")
+          .with(
+            body: {
+              transaction: {
+                payment_method_token: payment_method_token,
+                amount: 1000,
+                currency_code: "USD",
+                retain_on_success: true
+              }
+            }
+          )
+          .to_return(status: 200, body: succeeded_body)
+
+        response = client.purchase(1000, payment_method_token, currency: "USD", store: true)
+
+        expect(stub).to have_been_requested
+        expect(response).to be_success
+      end
+
       it "raises when no gateway_token is configured" do
         tokenless = described_class.new(login: "env-key", password: "access-secret")
 

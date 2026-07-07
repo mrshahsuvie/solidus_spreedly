@@ -61,6 +61,30 @@ RSpec.describe SolidusSpreedly::Gateway do
     end
   end
 
+  describe "#retain_on_success_for" do
+    it "defaults to false when no per-call store key and preference is false" do
+      expect(gateway.retain_on_success_for(source, gateway_options)).to be(false)
+    end
+
+    it "returns the preference when no per-call store key is present" do
+      gateway.preferred_retain_on_success = true
+
+      expect(gateway.retain_on_success_for(source, gateway_options)).to be(true)
+    end
+
+    it "honors an explicit per-call store: true over a false preference" do
+      gateway.preferred_retain_on_success = false
+
+      expect(gateway.retain_on_success_for(source, gateway_options.merge(store: true))).to be(true)
+    end
+
+    it "honors an explicit per-call store: false over a true preference" do
+      gateway.preferred_retain_on_success = true
+
+      expect(gateway.retain_on_success_for(source, gateway_options.merge(store: false))).to be(false)
+    end
+  end
+
   describe "#purchase" do
     context "in :gateway mode (default)" do
       it "delegates to the client with the configured gateway_token" do
@@ -118,6 +142,40 @@ RSpec.describe SolidusSpreedly::Gateway do
 
         gateway.purchase(1000, source, gateway_options)
       end
+
+      it "omits store when retain_on_success is off by default" do
+        expect(client).to receive(:purchase).with(
+          1000,
+          "PMT123",
+          hash_not_including(:store)
+        ).and_return(success_response)
+
+        gateway.purchase(1000, source, gateway_options)
+      end
+
+      it "passes store: true when the retain_on_success preference is enabled" do
+        gateway.preferred_retain_on_success = true
+
+        expect(client).to receive(:purchase).with(
+          1000,
+          "PMT123",
+          hash_including(store: true)
+        ).and_return(success_response)
+
+        gateway.purchase(1000, source, gateway_options)
+      end
+
+      it "honors an explicit per-call store: false over a true preference" do
+        gateway.preferred_retain_on_success = true
+
+        expect(client).to receive(:purchase).with(
+          1000,
+          "PMT123",
+          hash_not_including(:store)
+        ).and_return(success_response)
+
+        gateway.purchase(1000, source, gateway_options.merge(store: false))
+      end
     end
 
     context "in :workflow mode" do
@@ -145,6 +203,18 @@ RSpec.describe SolidusSpreedly::Gateway do
           1000,
           "PMT123",
           hash_including(orchestration_mode: :workflow, workflow_key: "CANARY_WORKFLOW")
+        ).and_return(success_response)
+
+        gateway.purchase(1000, source, gateway_options)
+      end
+
+      it "passes store: true in workflow mode when the retain_on_success preference is enabled" do
+        gateway.preferred_retain_on_success = true
+
+        expect(client).to receive(:purchase).with(
+          1000,
+          "PMT123",
+          hash_including(orchestration_mode: :workflow, workflow_key: "WF999", store: true)
         ).and_return(success_response)
 
         gateway.purchase(1000, source, gateway_options)

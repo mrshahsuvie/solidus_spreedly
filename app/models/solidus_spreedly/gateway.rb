@@ -30,6 +30,12 @@ module SolidusSpreedly
     # Optional 3DS2 provider key, enabling the SCA flow on purchase/authorize.
     preference :sca_provider_key, :string, default: nil
 
+    # When true, a successful purchase/authorize also retains (vaults) the card
+    # for later reuse. Off by default so charging never vaults as a side effect.
+    preference :retain_on_success, :boolean, default: false
+
+    validates :preferred_retain_on_success, inclusion: {in: [true, false]}
+
     def partial_name
       "spreedly"
     end
@@ -219,6 +225,24 @@ module SolidusSpreedly
       gateway_options[:transaction_metadata] || {}
     end
 
+    # Overridable hook: whether a successful purchase/authorize should also
+    # retain (vault) the card for reuse.
+    #
+    # Precedence:
+    #   1. explicit per-call gateway_options[:store] (true/false) wins
+    #   2. else the :retain_on_success preference
+    #   3. else false
+    #
+    # @param _source [SolidusSpreedly::Source]
+    # @param gateway_options [Hash]
+    # @return [Boolean]
+    def retain_on_success_for(_source, gateway_options)
+      gateway_options = gateway_options.to_h
+      return !!gateway_options[:store] if gateway_options.key?(:store)
+
+      preferred_retain_on_success
+    end
+
     protected
 
     # Solidus calls +gateway+/+gateway_class+ through its default delegation,
@@ -291,6 +315,8 @@ module SolidusSpreedly
 
       transaction_metadata = transaction_metadata_for(source, gateway_options)
       options[:transaction_metadata] = transaction_metadata if transaction_metadata.present?
+
+      options[:store] = true if retain_on_success_for(source, gateway_options)
 
       options.compact
     end

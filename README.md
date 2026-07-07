@@ -64,6 +64,7 @@ available preferences are:
 | `gateway_token` | `:gateway` mode | Token of the gateway configured in Spreedly |
 | `workflow_key` | `:workflow` mode | Composer workflow key |
 | `sca_provider_key` | optional | Enables the 3DS2 / SCA flow on purchase/authorize |
+| `retain_on_success` | optional | When `true`, a successful purchase/authorize also retains (vaults) the card for reuse. Defaults to `false`. |
 | `test_mode` | optional | Defaults to `true`; set `false` in production |
 
 #### Option A — static preferences (recommended)
@@ -165,6 +166,50 @@ module MyStore
     end
   end
 end
+```
+
+### Retain on successful charge
+
+By default, purchase/authorize calls do **not** retain the card.
+
+Precedence:
+
+1. explicit per-call `gateway_options[:store]` (`true`/`false`) wins
+2. else the `:retain_on_success` payment-method preference
+3. else off
+
+When enabled, the adapter sends `store: true` to the client, which maps to
+Spreedly's `retain_on_success` field on the transaction body.
+
+Enable store-wide via the preference:
+
+```ruby
+SolidusSpreedly::Gateway.create!(
+  name: 'Spreedly',
+  preferred_retain_on_success: true,
+  # ...
+)
+```
+
+Or override the hook in a gateway subclass (for example, to retain every charge
+while still honoring an explicit per-call opt-out):
+
+```ruby
+module MyStore
+  class SpreedlyGateway < SolidusSpreedly::Gateway
+    def retain_on_success_for(_source, gateway_options)
+      return super if gateway_options.to_h.key?(:store)
+
+      true
+    end
+  end
+end
+```
+
+Per-call override from application code:
+
+```ruby
+payment_method.purchase(amount_cents, source, store: false)
 ```
 
 ## 3DS2 / pending completion
