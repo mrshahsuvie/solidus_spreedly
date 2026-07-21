@@ -211,6 +211,58 @@ RSpec.describe SolidusSpreedly::Client do
         expect(response).to be_success
       end
 
+      it "includes attempt_network_token when requested" do
+        stub = stub_request(:post, "#{base_url}/gateways/GATEWAY123/purchase.json")
+          .with(
+            body: {
+              transaction: {
+                payment_method_token: payment_method_token,
+                amount: 1000,
+                currency_code: "USD",
+                attempt_network_token: true
+              }
+            }
+          )
+          .to_return(status: 200, body: succeeded_body)
+
+        response = client.purchase(
+          1000,
+          payment_method_token,
+          currency: "USD",
+          attempt_network_token: true
+        )
+
+        expect(stub).to have_been_requested
+        expect(response).to be_success
+      end
+
+      it "includes provision_network_token with retain_on_success when both are requested" do
+        stub = stub_request(:post, "#{base_url}/gateways/GATEWAY123/purchase.json")
+          .with(
+            body: {
+              transaction: {
+                payment_method_token: payment_method_token,
+                amount: 1000,
+                currency_code: "USD",
+                retain_on_success: true,
+                provision_network_token: true
+              }
+            }
+          )
+          .to_return(status: 200, body: succeeded_body)
+
+        response = client.purchase(
+          1000,
+          payment_method_token,
+          currency: "USD",
+          store: true,
+          provision_network_token: true
+        )
+
+        expect(stub).to have_been_requested
+        expect(response).to be_success
+      end
+
       it "raises when no gateway_token is configured" do
         tokenless = described_class.new(login: "env-key", password: "access-secret")
 
@@ -519,6 +571,28 @@ RSpec.describe SolidusSpreedly::Client do
       expect(response).to be_success
     end
 
+    it "includes provision_network_token when requested" do
+      stub = stub_request(:post, "#{base_url}/payment_methods.json")
+        .with(
+          body: {
+            payment_method: {
+              credit_card: credit_card,
+              retained: true,
+              provision_network_token: true
+            }
+          }
+        )
+        .to_return(status: 201, body: add_payment_method_body)
+
+      response = client.create_payment_method(
+        credit_card: credit_card,
+        provision_network_token: true
+      )
+
+      expect(stub).to have_been_requested
+      expect(response).to be_success
+    end
+
     it "maps validation failures into an unsuccessful response" do
       stub_request(:post, "#{base_url}/payment_methods.json")
         .to_return(status: 422, body: add_payment_method_failed_body)
@@ -541,6 +615,17 @@ RSpec.describe SolidusSpreedly::Client do
         .to_return(status: 200, body: succeeded_body)
 
       response = client.store("PMT123")
+
+      expect(stub).to have_been_requested
+      expect(response).to be_success
+    end
+
+    it "includes provision_network_token in the retain body when requested" do
+      stub = stub_request(:put, "#{base_url}/payment_methods/PMT123/retain.json")
+        .with(body: {payment_method: {provision_network_token: true}})
+        .to_return(status: 200, body: succeeded_body)
+
+      response = client.store("PMT123", provision_network_token: true)
 
       expect(stub).to have_been_requested
       expect(response).to be_success

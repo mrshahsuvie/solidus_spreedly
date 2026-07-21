@@ -65,6 +65,8 @@ available preferences are:
 | `workflow_key` | `:workflow` mode | Composer workflow key |
 | `sca_provider_key` | optional | Enables the 3DS2 / SCA flow on purchase/authorize |
 | `retain_on_success` | optional | When `true`, a successful purchase/authorize also retains (vaults) the card for reuse. Defaults to `false`. |
+| `attempt_network_token` | optional | When `true`, purchase/authorize prefer a Spreedly network token (Advanced Vault). Spreedly falls back to PAN when NT is unusable. Defaults to `false`. |
+| `provision_network_token` | optional | When `true`, request network-token provisioning while retaining (create/retain, or charge with `retain_on_success`). Defaults to `false`. |
 | `test_mode` | optional | Defaults to `true`; set `false` in production |
 
 #### Option A — static preferences (recommended)
@@ -86,6 +88,9 @@ Rails.application.config.to_prepare do
       gateway_token: ENV.fetch('SPREEDLY_GATEWAY_TOKEN', ''),
       workflow_key: ENV.fetch('SPREEDLY_WORKFLOW_KEY', ''),
       sca_provider_key: ENV.fetch('SPREEDLY_SCA_PROVIDER_KEY', ''),
+      retain_on_success: false,
+      attempt_network_token: ENV.fetch('SPREEDLY_ATTEMPT_NETWORK_TOKEN', 'false') == 'true',
+      provision_network_token: ENV.fetch('SPREEDLY_PROVISION_NETWORK_TOKEN', 'false') == 'true',
       test_mode: !Rails.env.production?
     }
   )
@@ -211,6 +216,67 @@ Per-call override from application code:
 ```ruby
 payment_method.purchase(amount_cents, source, store: false)
 ```
+
+### Network tokenization
+
+[Network tokenization](https://developer.spreedly.com/docs/network-tokenization)
+is part of Spreedly Advanced Vault. Before enabling it in Solidus:
+
+1. Advanced Vault must be enabled on your Spreedly account, with TRIDs for the
+   card networks you use (Visa / Mastercard).
+2. For gateways that require it (e.g. Stripe Payment Intents, Braintree), enable
+   network tokens on the merchant account and set
+   `enabled_network_tokens: true` on the Spreedly gateway.
+3. Prefer NT on charges with `attempt_network_token`, and provision tokens while
+   retaining with `provision_network_token`.
+
+Both flags are **opt-in** (`false` by default). When `attempt_network_token` is
+true, Spreedly prefers a network token and falls back to the PAN when NT cannot
+be used. Payment success is independent of NT provision/attempt errors; the
+full Spreedly response (including `transaction.network_tokenization`) is kept
+in ActiveMerchant `params`.
+
+Precedence for each flag mirrors `retain_on_success`:
+
+1. explicit per-call `gateway_options[:attempt_network_token]` /
+   `[:provision_network_token]` wins
+2. else the matching payment-method preference
+3. else off
+
+Enable via preferences:
+
+```ruby
+SolidusSpreedly::Gateway.create!(
+  name: 'Spreedly',
+  preferred_attempt_network_token: true,
+  preferred_provision_network_token: true,
+  preferred_retain_on_success: true, # often used with provisioning on charge
+  # ...
+)
+```
+
+Or override the hooks (for example, only attempt NT for recurring sources):
+
+```ruby
+module MyStore
+  class SpreedlyGateway < SolidusSpreedly::Gateway
+    def attempt_network_token_for(source, gateway_options)
+      return super if gateway_options.to_h.key?(:attempt_network_token)
+
+      source.respond_to?(:reusable?) && source.reusable?
+    end
+  end
+end
+```
+
+Per-call override:
+
+```ruby
+payment_method.purchase(amount_cents, source, attempt_network_token: false)
+```
+
+`create_payment_method` / `store` on the client also accept
+`provision_network_token: true` when vaulting outside the payment flow.
 
 ## 3DS2 / pending completion
 

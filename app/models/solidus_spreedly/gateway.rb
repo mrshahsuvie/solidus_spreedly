@@ -34,7 +34,17 @@ module SolidusSpreedly
     # for later reuse. Off by default so charging never vaults as a side effect.
     preference :retain_on_success, :boolean, default: false
 
+    # When true, purchase/authorize attempt to use a Spreedly network token
+    # (Advanced Vault). Spreedly falls back to PAN when NT is unusable.
+    preference :attempt_network_token, :boolean, default: false
+
+    # When true, request network-token provisioning while retaining a payment
+    # method (create/retain, or purchase/authorize with retain_on_success).
+    preference :provision_network_token, :boolean, default: false
+
     validates :preferred_retain_on_success, inclusion: {in: [true, false]}
+    validates :preferred_attempt_network_token, inclusion: {in: [true, false]}
+    validates :preferred_provision_network_token, inclusion: {in: [true, false]}
 
     def partial_name
       "spreedly"
@@ -243,6 +253,42 @@ module SolidusSpreedly
       preferred_retain_on_success
     end
 
+    # Overridable hook: whether purchase/authorize should attempt a network
+    # token (Advanced Vault). Spreedly falls back to PAN when NT cannot be used.
+    #
+    # Precedence:
+    #   1. explicit per-call gateway_options[:attempt_network_token] wins
+    #   2. else the :attempt_network_token preference
+    #   3. else false
+    #
+    # @param _source [SolidusSpreedly::Source]
+    # @param gateway_options [Hash]
+    # @return [Boolean]
+    def attempt_network_token_for(_source, gateway_options)
+      gateway_options = gateway_options.to_h
+      return !!gateway_options[:attempt_network_token] if gateway_options.key?(:attempt_network_token)
+
+      preferred_attempt_network_token
+    end
+
+    # Overridable hook: whether to request network-token provisioning while
+    # retaining (create/retain, or purchase/authorize with retain_on_success).
+    #
+    # Precedence:
+    #   1. explicit per-call gateway_options[:provision_network_token] wins
+    #   2. else the :provision_network_token preference
+    #   3. else false
+    #
+    # @param _source [SolidusSpreedly::Source]
+    # @param gateway_options [Hash]
+    # @return [Boolean]
+    def provision_network_token_for(_source, gateway_options)
+      gateway_options = gateway_options.to_h
+      return !!gateway_options[:provision_network_token] if gateway_options.key?(:provision_network_token)
+
+      preferred_provision_network_token
+    end
+
     protected
 
     # Solidus calls +gateway+/+gateway_class+ through its default delegation,
@@ -288,15 +334,19 @@ module SolidusSpreedly
     # Build the per-call options for purchase/authorize.
     #
     # Merges common Solidus gateway options with {#routing_options} and optional
-    # 3DS2 / transaction_metadata fields. Supported +gateway_options+ keys:
+    # 3DS2 / transaction_metadata / network-tokenization fields. Supported
+    # +gateway_options+ keys:
     #
     #   * +:currency+ - ISO currency code
     #   * +:order_id+ - merchant order reference
     #   * +:ip+ - buyer IP address
     #   * +:email+ - buyer email
     #   * +:browser_info+ - 3DS2 browser fingerprint hash
-    #   * +:transaction_metadata+ - transaction transaction_metadata hash for Spreedly Workflow rules
-    #     (also available via the overridable {#transaction_metadata_for} hook)
+    #   * +:transaction_metadata+ - transaction metadata hash for Spreedly Workflow
+    #     rules (also available via the overridable {#transaction_metadata_for} hook)
+    #   * +:store+ - per-call override for {#retain_on_success_for}
+    #   * +:attempt_network_token+ - per-call override for {#attempt_network_token_for}
+    #   * +:provision_network_token+ - per-call override for {#provision_network_token_for}
     #
     # @param source [SolidusSpreedly::Source]
     # @param gateway_options [Hash]
@@ -317,6 +367,8 @@ module SolidusSpreedly
       options[:transaction_metadata] = transaction_metadata if transaction_metadata.present?
 
       options[:store] = true if retain_on_success_for(source, gateway_options)
+      options[:attempt_network_token] = true if attempt_network_token_for(source, gateway_options)
+      options[:provision_network_token] = true if provision_network_token_for(source, gateway_options)
 
       options.compact
     end

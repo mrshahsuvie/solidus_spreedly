@@ -85,6 +85,54 @@ RSpec.describe SolidusSpreedly::Gateway do
     end
   end
 
+  describe "#attempt_network_token_for" do
+    it "defaults to false when no per-call key and preference is false" do
+      expect(gateway.attempt_network_token_for(source, gateway_options)).to be(false)
+    end
+
+    it "returns the preference when no per-call key is present" do
+      gateway.preferred_attempt_network_token = true
+
+      expect(gateway.attempt_network_token_for(source, gateway_options)).to be(true)
+    end
+
+    it "honors an explicit per-call true over a false preference" do
+      gateway.preferred_attempt_network_token = false
+
+      expect(gateway.attempt_network_token_for(source, gateway_options.merge(attempt_network_token: true))).to be(true)
+    end
+
+    it "honors an explicit per-call false over a true preference" do
+      gateway.preferred_attempt_network_token = true
+
+      expect(gateway.attempt_network_token_for(source, gateway_options.merge(attempt_network_token: false))).to be(false)
+    end
+  end
+
+  describe "#provision_network_token_for" do
+    it "defaults to false when no per-call key and preference is false" do
+      expect(gateway.provision_network_token_for(source, gateway_options)).to be(false)
+    end
+
+    it "returns the preference when no per-call key is present" do
+      gateway.preferred_provision_network_token = true
+
+      expect(gateway.provision_network_token_for(source, gateway_options)).to be(true)
+    end
+
+    it "honors an explicit per-call true over a false preference" do
+      gateway.preferred_provision_network_token = false
+
+      expect(gateway.provision_network_token_for(source, gateway_options.merge(provision_network_token: true))).to be(true)
+    end
+
+    it "honors an explicit per-call false over a true preference" do
+      gateway.preferred_provision_network_token = true
+
+      expect(gateway.provision_network_token_for(source, gateway_options.merge(provision_network_token: false))).to be(false)
+    end
+  end
+
   describe "#purchase" do
     context "in :gateway mode (default)" do
       it "delegates to the client with the configured gateway_token" do
@@ -175,6 +223,52 @@ RSpec.describe SolidusSpreedly::Gateway do
         ).and_return(success_response)
 
         gateway.purchase(1000, source, gateway_options.merge(store: false))
+      end
+
+      it "omits network tokenization flags by default" do
+        expect(client).to receive(:purchase).with(
+          1000,
+          "PMT123",
+          hash_not_including(:attempt_network_token, :provision_network_token)
+        ).and_return(success_response)
+
+        gateway.purchase(1000, source, gateway_options)
+      end
+
+      it "passes attempt_network_token when the preference is enabled" do
+        gateway.preferred_attempt_network_token = true
+
+        expect(client).to receive(:purchase).with(
+          1000,
+          "PMT123",
+          hash_including(attempt_network_token: true)
+        ).and_return(success_response)
+
+        gateway.purchase(1000, source, gateway_options)
+      end
+
+      it "passes provision_network_token when the preference is enabled" do
+        gateway.preferred_provision_network_token = true
+
+        expect(client).to receive(:purchase).with(
+          1000,
+          "PMT123",
+          hash_including(provision_network_token: true)
+        ).and_return(success_response)
+
+        gateway.purchase(1000, source, gateway_options)
+      end
+
+      it "honors a per-call attempt_network_token override over the preference" do
+        gateway.preferred_attempt_network_token = true
+
+        expect(client).to receive(:purchase).with(
+          1000,
+          "PMT123",
+          hash_not_including(:attempt_network_token)
+        ).and_return(success_response)
+
+        gateway.purchase(1000, source, gateway_options.merge(attempt_network_token: false))
       end
     end
 

@@ -50,10 +50,13 @@ module SolidusSpreedly
     # money          - The amount in cents.
     # payment_method - The Spreedly payment method token (String).
     # options        - See #build_transaction_body, plus routing options:
-    #                  :orchestration_mode - :gateway (default) or :workflow.
-    #                  :gateway_token      - Required in :gateway mode.
-    #                  :workflow_key       - Optional in :workflow mode.
-    #                  :transaction_metadata           - Optional hash of transaction metadata.
+    #                  :orchestration_mode     - :gateway (default) or :workflow.
+    #                  :gateway_token          - Required in :gateway mode.
+    #                  :workflow_key           - Optional in :workflow mode.
+    #                  :transaction_metadata   - Optional hash of transaction metadata.
+    #                  :attempt_network_token  - Prefer a network token when available.
+    #                  :provision_network_token - Request NT provisioning (with retain).
+    #                  :store                  - Retain the payment method on success.
     def purchase(money, payment_method, options = {})
       commit(:post, transaction_path("purchase", options), build_transaction_body(money, payment_method, options))
     end
@@ -119,6 +122,8 @@ module SolidusSpreedly
     #           :bank_account - Hash of bank-account attributes.
     #           :payment_method - Full payment_method payload (overrides the above).
     #           :retain       - Whether to retain in the vault (default: true).
+    #           :provision_network_token - Request a network token while retaining
+    #                                      (Advanced Vault; requires TRIDs).
     #           :email, :data - Optional metadata fields.
     #
     # @return [ActiveMerchant::Billing::Response]
@@ -131,8 +136,11 @@ module SolidusSpreedly
     # Public: Retain (vault) a payment method so it can be reused.
     #
     # payment_method_token - The Spreedly payment method token to retain.
+    # options              - Optional hash:
+    #                        :provision_network_token - Request a network token
+    #                          for the retained payment method (Advanced Vault).
     def store(payment_method_token, options = {})
-      commit(:put, "payment_methods/#{payment_method_token}/retain.json", nil)
+      commit(:put, "payment_methods/#{payment_method_token}/retain.json", build_retain_body(options))
     end
 
     alias_method :retain, :store
@@ -185,6 +193,7 @@ module SolidusSpreedly
       if options[:transaction_metadata].is_a?(Hash) && options[:transaction_metadata].any?
         transaction[:transaction_metadata] = options[:transaction_metadata]
       end
+      add_network_tokenization(transaction, options)
 
       add_three_ds(transaction, options)
       add_workflow_key(transaction, options)
@@ -232,6 +241,9 @@ module SolidusSpreedly
       payment_method[:retained] = options.fetch(:retain, true) unless payment_method.key?(:retained)
       payment_method[:email] = options[:email] if options[:email] && !payment_method.key?(:email)
       payment_method[:data] = options[:data] if options[:data] && !payment_method.key?(:data)
+      if options[:provision_network_token] && !payment_method.key?(:provision_network_token)
+        payment_method[:provision_network_token] = true
+      end
 
       {payment_method: payment_method}
     end
@@ -244,6 +256,18 @@ module SolidusSpreedly
       else
         raise ArgumentError, "credit_card, bank_account, or payment_method is required"
       end
+    end
+
+    # Internal: Body for PUT retain. Only sent when provisioning a network token.
+    def build_retain_body(options)
+      return unless options[:provision_network_token]
+
+      {payment_method: {provision_network_token: true}}
+    end
+
+    def add_network_tokenization(transaction, options)
+      transaction[:attempt_network_token] = true if options[:attempt_network_token]
+      transaction[:provision_network_token] = true if options[:provision_network_token]
     end
 
     def add_three_ds(transaction, options)
