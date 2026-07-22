@@ -4,5 +4,6 @@ require "active_merchant"
 
 require "solidus_spreedly/configuration"
 require "solidus_spreedly/client"
+require "solidus_spreedly/payment_method_response"
 require "solidus_spreedly/version"
 require "solidus_spreedly/engine"

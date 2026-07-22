@@ -145,6 +145,22 @@ module SolidusSpreedly
 
     alias_method :retain, :store
 
+    # Public: Update Advanced Vault +managed+ on a payment method without a paid
+    # update. Spreedly: +PUT /v1/payment_methods/{token}/update_gratis.json+.
+    #
+    # Returns {SolidusSpreedly::PaymentMethodResponse}, not an ActiveMerchant
+    # billing response (the endpoint returns a payment_method payload).
+    #
+    # payment_method_token - The Spreedly payment method token.
+    # managed:             - Desired Advanced Vault managed flag (true/false).
+    #
+    # @return [SolidusSpreedly::PaymentMethodResponse]
+    def update_gratis(payment_method_token, managed:)
+      body = {payment_method: {managed: managed}}
+      raw = request(:put, "payment_methods/#{payment_method_token}/update_gratis.json", body)
+      PaymentMethodResponse.from_raw(raw, expect: {managed: managed})
+    end
+
     def supports_scrubbing?
       true
     end
@@ -291,23 +307,24 @@ module SolidusSpreedly
     end
 
     def commit(method, path, body)
+      response_from(request(method, path, body))
+    end
+
+    def request(method, path, body)
       url = "#{live_url}/#{path}"
 
-      raw_response =
-        begin
-          case method
-          when :get
-            ssl_get(url, headers)
-          when :put
-            ssl_request(:put, url, body ? body.to_json : "", headers)
-          else
-            ssl_post(url, body ? body.to_json : "", headers)
-          end
-        rescue ::ActiveMerchant::ResponseError => e
-          e.response.body
+      begin
+        case method
+        when :get
+          ssl_get(url, headers)
+        when :put
+          ssl_request(:put, url, body ? body.to_json : "", headers)
+        else
+          ssl_post(url, body ? body.to_json : "", headers)
         end
-
-      response_from(raw_response)
+      rescue ::ActiveMerchant::ResponseError => e
+        e.response.body
+      end
     end
 
     def response_from(raw_response)

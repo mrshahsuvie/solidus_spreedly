@@ -632,6 +632,74 @@ RSpec.describe SolidusSpreedly::Client do
     end
   end
 
+  describe "#update_gratis" do
+    let(:auth_header) { "Basic #{Base64.strict_encode64("env-key:access-secret")}" }
+
+    def update_gratis_body(token: payment_method_token, managed: false, errors: [])
+      {
+        payment_method: {
+          token: token,
+          managed: managed,
+          errors: errors
+        }
+      }.to_json
+    end
+
+    it "PUTs managed flag and returns PaymentMethodResponse on success" do
+      stub = stub_request(:put, "#{base_url}/payment_methods/PMT123/update_gratis.json")
+        .with(
+          body: {payment_method: {managed: false}}.to_json,
+          headers: {
+            "Authorization" => auth_header,
+            "Content-Type" => "application/json",
+            "Accept" => "application/json"
+          }
+        )
+        .to_return(status: 200, body: update_gratis_body(managed: false))
+
+      response = client.update_gratis("PMT123", managed: false)
+
+      expect(stub).to have_been_requested
+      expect(response).to be_a(SolidusSpreedly::PaymentMethodResponse)
+      expect(response).to be_success
+      expect(response.message).to eq("OK")
+      expect(response.payment_method_token).to eq("PMT123")
+      expect(response.error_code).to be_nil
+    end
+
+    it "is not successful when managed does not match the requested value" do
+      stub_request(:put, "#{base_url}/payment_methods/PMT123/update_gratis.json")
+        .to_return(status: 200, body: update_gratis_body(managed: true))
+
+      response = client.update_gratis("PMT123", managed: false)
+
+      expect(response).not_to be_success
+      expect(response.payment_method_token).to eq("PMT123")
+    end
+
+    it "maps top-level Spreedly errors" do
+      stub_request(:put, "#{base_url}/payment_methods/PMT123/update_gratis.json")
+        .to_return(
+          status: 404,
+          body: {
+            errors: [
+              {
+                key: "errors.not_found",
+                message: "Unable to find the specified payment method."
+              }
+            ]
+          }.to_json
+        )
+
+      response = client.update_gratis("PMT123", managed: false)
+
+      expect(response).to be_a(SolidusSpreedly::PaymentMethodResponse)
+      expect(response).not_to be_success
+      expect(response.error_code).to eq("errors.not_found")
+      expect(response.message).to eq("Unable to find the specified payment method.")
+    end
+  end
+
   describe "#scrub" do
     it "filters credentials and card data out of a transcript" do
       transcript = <<~TRANSCRIPT

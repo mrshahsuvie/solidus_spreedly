@@ -278,6 +278,25 @@ payment_method.purchase(amount_cents, source, attempt_network_token: false)
 `create_payment_method` / `store` on the client also accept
 `provision_network_token: true` when vaulting outside the payment flow.
 
+### Vault helpers
+
+To flip Spreedly Advanced Vault's `managed` flag on a payment method without a
+paid update, call `update_gratis` on the gateway client:
+
+```ruby
+response = payment_method.client.update_gratis(payment_method_token, managed: false)
+
+response.success?              # => true when managed matches the request and there are no errors
+response.payment_method_token  # => Spreedly payment method token
+response.error_code            # => e.g. "errors.not_found"
+```
+
+This hits `PUT /v1/payment_methods/{token}/update_gratis.json` and returns a
+`SolidusSpreedly::PaymentMethodResponse` (not an ActiveMerchant transaction
+response). The same response type is reused for any Spreedly endpoint that
+returns a `payment_method` payload; pass `expect:` when success depends on
+specific attributes matching the request.
+
 ## 3DS2 / pending completion
 
 When a `sca_provider_key` is configured and the issuer requires a challenge, a
