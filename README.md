@@ -297,6 +297,19 @@ response). The same response type is reused for any Spreedly endpoint that
 returns a `payment_method` payload; pass `expect:` when success depends on
 specific attributes matching the request.
 
+To permanently wipe a vaulted payment method (Spreedly Redact Payment Method):
+
+```ruby
+response = payment_method.client.redact(payment_method_token, remove_personal_data: true)
+
+response.success?    # => ActiveMerchant::Billing::Response
+response.error_code  # => e.g. "errors.not_found"
+```
+
+This hits `PUT /v1/payment_methods/{token}/redact.json`. Optional
+`remove_from_gateway:` removes the card from a third-party gateway vault as
+well. Empty options send an empty body (Spreedly accepts that).
+
 ## 3DS2 / pending completion
 
 When a `sca_provider_key` is configured and the issuer requires a challenge, a

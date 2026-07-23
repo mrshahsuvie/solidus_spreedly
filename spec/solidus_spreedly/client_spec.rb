@@ -700,6 +700,69 @@ RSpec.describe SolidusSpreedly::Client do
     end
   end
 
+  describe "#redact" do
+    def redact_succeeded_body(token: "TXNREDACT")
+      {
+        transaction: {
+          token: token,
+          succeeded: true,
+          state: "succeeded",
+          transaction_type: "RedactPaymentMethod",
+          message: "Succeeded!",
+          on_test_gateway: true,
+          payment_method: {
+            token: payment_method_token,
+            storage_state: "redacted"
+          }
+        }
+      }.to_json
+    end
+
+    it "PUTs to the payment-method redact endpoint" do
+      stub = stub_request(:put, "#{base_url}/payment_methods/PMT123/redact.json")
+        .with(body: "")
+        .to_return(status: 200, body: redact_succeeded_body)
+
+      response = client.redact("PMT123")
+
+      expect(stub).to have_been_requested
+      expect(response).to be_a(ActiveMerchant::Billing::Response)
+      expect(response).to be_success
+    end
+
+    it "includes remove_personal_data in the redact body when requested" do
+      stub = stub_request(:put, "#{base_url}/payment_methods/PMT123/redact.json")
+        .with(body: {transaction: {remove_personal_data: true}}.to_json)
+        .to_return(status: 200, body: redact_succeeded_body)
+
+      response = client.redact("PMT123", remove_personal_data: true)
+
+      expect(stub).to have_been_requested
+      expect(response).to be_success
+    end
+
+    it "maps Spreedly not_found into an unsuccessful response" do
+      stub_request(:put, "#{base_url}/payment_methods/PMT123/redact.json")
+        .to_return(
+          status: 404,
+          body: {
+            errors: [
+              {
+                key: "errors.not_found",
+                message: "Unable to find the specified payment method."
+              }
+            ]
+          }.to_json
+        )
+
+      response = client.redact("PMT123", remove_personal_data: true)
+
+      expect(response).not_to be_success
+      expect(response.error_code).to eq("errors.not_found")
+      expect(response.message).to eq("Unable to find the specified payment method.")
+    end
+  end
+
   describe "#scrub" do
     it "filters credentials and card data out of a transcript" do
       transcript = <<~TRANSCRIPT

@@ -161,6 +161,28 @@ module SolidusSpreedly
       PaymentMethodResponse.from_raw(raw, expect: {managed: managed})
     end
 
+    # Public: Permanently redact a vaulted payment method.
+    # Spreedly: +PUT /v1/payment_methods/{token}/redact.json+.
+    #
+    # Returns an ActiveMerchant billing response (transaction-shaped payload,
+    # same as +store+/+retain+).
+    #
+    # payment_method_token - The Spreedly payment method token to redact.
+    # options              - Optional hash:
+    #                        :remove_personal_data - When true, also strip PII
+    #                          from the payment method record.
+    #                        :remove_from_gateway  - Optional third-party
+    #                          gateway token to remove the card from as well.
+    #
+    # @return [ActiveMerchant::Billing::Response]
+    def redact(payment_method_token, options = {})
+      commit(
+        :put,
+        "payment_methods/#{payment_method_token}/redact.json",
+        build_redact_body(options)
+      )
+    end
+
     def supports_scrubbing?
       true
     end
@@ -279,6 +301,18 @@ module SolidusSpreedly
       return unless options[:provision_network_token]
 
       {payment_method: {provision_network_token: true}}
+    end
+
+    # Internal: Body for PUT redact. Nil when Spreedly should receive an empty body.
+    def build_redact_body(options)
+      transaction = {}
+      transaction[:remove_personal_data] = true if options[:remove_personal_data]
+      if options[:remove_from_gateway].present?
+        transaction[:remove_from_gateway] = options[:remove_from_gateway]
+      end
+      return if transaction.empty?
+
+      {transaction: transaction}
     end
 
     def add_network_tokenization(transaction, options)
