@@ -278,6 +278,37 @@ payment_method.purchase(amount_cents, source, attempt_network_token: false)
 `create_payment_method` / `store` on the client also accept
 `provision_network_token: true` when vaulting outside the payment flow.
 
+### Stored credentials (CIT / MIT)
+
+Visa and Mastercard require [stored credential](https://developer.spreedly.com/docs/stored-credentials)
+flags on recurring and unscheduled merchant-initiated charges. Pass both
+required fields together (Spreedly omits incomplete pairs); optionally set
+`stored_credential_alternate_gateway` (e.g. `scheme_issued`) so Spreedly can
+reuse a network transaction ID across processors:
+
+```ruby
+# Customer-initiated checkout (CIT)
+payment_method.purchase(
+  amount_cents,
+  source,
+  stored_credential_initiator: :cardholder,
+  stored_credential_reason_type: :unscheduled
+)
+
+# Merchant-initiated recurring charge (MIT)
+payment_method.purchase(
+  amount_cents,
+  source,
+  stored_credential_initiator: :merchant,
+  stored_credential_reason_type: :recurring,
+  stored_credential_alternate_gateway: :scheme_issued
+)
+```
+
+Host apps typically set these via `gateway_options` so
+`Gateway#transaction_options` forwards them to the client. If either required
+field is blank, neither field is sent.
+
 ### Vault helpers
 
 To flip Spreedly Advanced Vault's `managed` flag on a payment method without a

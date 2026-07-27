@@ -57,6 +57,9 @@ module SolidusSpreedly
     #                  :attempt_network_token  - Prefer a network token when available.
     #                  :provision_network_token - Request NT provisioning (with retain).
     #                  :store                  - Retain the payment method on success.
+    #                  :stored_credential_initiator - cardholder|merchant (CIT/MIT).
+    #                  :stored_credential_reason_type - recurring|unscheduled|...
+    #                  :stored_credential_alternate_gateway - e.g. scheme_issued.
     def purchase(money, payment_method, options = {})
       commit(:post, transaction_path("purchase", options), build_transaction_body(money, payment_method, options))
     end
@@ -232,6 +235,7 @@ module SolidusSpreedly
         transaction[:transaction_metadata] = options[:transaction_metadata]
       end
       add_network_tokenization(transaction, options)
+      add_stored_credentials(transaction, options)
 
       add_three_ds(transaction, options)
       add_workflow_key(transaction, options)
@@ -282,6 +286,9 @@ module SolidusSpreedly
       if options[:provision_network_token] && !payment_method.key?(:provision_network_token)
         payment_method[:provision_network_token] = true
       end
+      if !options[:managed].nil? && !payment_method.key?(:managed)
+        payment_method[:managed] = options[:managed]
+      end
 
       {payment_method: payment_method}
     end
@@ -318,6 +325,21 @@ module SolidusSpreedly
     def add_network_tokenization(transaction, options)
       transaction[:attempt_network_token] = true if options[:attempt_network_token]
       transaction[:provision_network_token] = true if options[:provision_network_token]
+    end
+
+    # Internal: Visa/Mastercard stored-credential framework fields.
+    # Spreedly requires both initiator and reason_type together; omit both when
+    # either is blank. Optional alternate_gateway (e.g. scheme_issued) is only
+    # written when present.
+    def add_stored_credentials(transaction, options)
+      initiator = options[:stored_credential_initiator]
+      reason_type = options[:stored_credential_reason_type]
+      return if initiator.blank? || reason_type.blank?
+
+      transaction[:stored_credential_initiator] = initiator.to_s
+      transaction[:stored_credential_reason_type] = reason_type.to_s
+      alt = options[:stored_credential_alternate_gateway]
+      transaction[:stored_credential_alternate_gateway] = alt.to_s if alt.present?
     end
 
     def add_three_ds(transaction, options)

@@ -347,6 +347,11 @@ module SolidusSpreedly
     #   * +:store+ - per-call override for {#retain_on_success_for}
     #   * +:attempt_network_token+ - per-call override for {#attempt_network_token_for}
     #   * +:provision_network_token+ - per-call override for {#provision_network_token_for}
+    #   * +:stored_credential_initiator+ - +cardholder+ (CIT) or +merchant+ (MIT);
+    #     forwarded to Spreedly only when +stored_credential_reason_type+ is also set
+    #   * +:stored_credential_reason_type+ - e.g. +unscheduled+, +recurring+
+    #   * +:stored_credential_alternate_gateway+ - optional, e.g. +scheme_issued+
+    #     to reuse network transaction IDs across processors
     #
     # @param source [SolidusSpreedly::Source]
     # @param gateway_options [Hash]
@@ -370,7 +375,19 @@ module SolidusSpreedly
       options[:attempt_network_token] = true if attempt_network_token_for(source, gateway_options)
       options[:provision_network_token] = true if provision_network_token_for(source, gateway_options)
 
+      copy_stored_credential_options!(options, gateway_options)
+
       options.compact
+    end
+
+    def copy_stored_credential_options!(options, gateway_options)
+      %i[
+        stored_credential_initiator
+        stored_credential_reason_type
+        stored_credential_alternate_gateway
+      ].each do |key|
+        options[key] = gateway_options[key] if gateway_options[key].present?
+      end
     end
 
     def currency_options(gateway_options)

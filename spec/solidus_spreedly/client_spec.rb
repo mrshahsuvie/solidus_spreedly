@@ -263,6 +263,111 @@ RSpec.describe SolidusSpreedly::Client do
         expect(response).to be_success
       end
 
+      it "includes stored credential fields when initiator and reason_type are both present" do
+        stub = stub_request(:post, "#{base_url}/gateways/GATEWAY123/purchase.json")
+          .with(
+            body: {
+              transaction: {
+                payment_method_token: payment_method_token,
+                amount: 1000,
+                currency_code: "USD",
+                stored_credential_initiator: "cardholder",
+                stored_credential_reason_type: "unscheduled"
+              }
+            }
+          )
+          .to_return(status: 200, body: succeeded_body)
+
+        response = client.purchase(
+          1000,
+          payment_method_token,
+          currency: "USD",
+          stored_credential_initiator: :cardholder,
+          stored_credential_reason_type: :unscheduled
+        )
+
+        expect(stub).to have_been_requested
+        expect(response).to be_success
+      end
+
+      it "includes stored_credential_alternate_gateway when provided with both required fields" do
+        stub = stub_request(:post, "#{base_url}/gateways/GATEWAY123/purchase.json")
+          .with(
+            body: {
+              transaction: {
+                payment_method_token: payment_method_token,
+                amount: 1000,
+                currency_code: "USD",
+                stored_credential_initiator: "merchant",
+                stored_credential_reason_type: "recurring",
+                stored_credential_alternate_gateway: "scheme_issued"
+              }
+            }
+          )
+          .to_return(status: 200, body: succeeded_body)
+
+        response = client.purchase(
+          1000,
+          payment_method_token,
+          currency: "USD",
+          stored_credential_initiator: :merchant,
+          stored_credential_reason_type: :recurring,
+          stored_credential_alternate_gateway: :scheme_issued
+        )
+
+        expect(stub).to have_been_requested
+        expect(response).to be_success
+      end
+
+      it "omits stored credential fields when initiator is present without reason_type" do
+        stub = stub_request(:post, "#{base_url}/gateways/GATEWAY123/purchase.json")
+          .with(
+            body: {
+              transaction: {
+                payment_method_token: payment_method_token,
+                amount: 1000,
+                currency_code: "USD"
+              }
+            }
+          )
+          .to_return(status: 200, body: succeeded_body)
+
+        response = client.purchase(
+          1000,
+          payment_method_token,
+          currency: "USD",
+          stored_credential_initiator: :merchant
+        )
+
+        expect(stub).to have_been_requested
+        expect(response).to be_success
+      end
+
+      it "omits stored credential fields when reason_type is present without initiator" do
+        stub = stub_request(:post, "#{base_url}/gateways/GATEWAY123/purchase.json")
+          .with(
+            body: {
+              transaction: {
+                payment_method_token: payment_method_token,
+                amount: 1000,
+                currency_code: "USD"
+              }
+            }
+          )
+          .to_return(status: 200, body: succeeded_body)
+
+        response = client.purchase(
+          1000,
+          payment_method_token,
+          currency: "USD",
+          stored_credential_reason_type: :recurring,
+          stored_credential_alternate_gateway: :scheme_issued
+        )
+
+        expect(stub).to have_been_requested
+        expect(response).to be_success
+      end
+
       it "raises when no gateway_token is configured" do
         tokenless = described_class.new(login: "env-key", password: "access-secret")
 

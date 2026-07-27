@@ -270,6 +270,42 @@ RSpec.describe SolidusSpreedly::Gateway do
 
         gateway.purchase(1000, source, gateway_options.merge(attempt_network_token: false))
       end
+
+      it "forwards stored credential options from gateway_options" do
+        expect(client).to receive(:purchase).with(
+          1000,
+          "PMT123",
+          hash_including(
+            stored_credential_initiator: :merchant,
+            stored_credential_reason_type: :recurring,
+            stored_credential_alternate_gateway: :scheme_issued
+          )
+        ).and_return(success_response)
+
+        gateway.purchase(
+          1000,
+          source,
+          gateway_options.merge(
+            stored_credential_initiator: :merchant,
+            stored_credential_reason_type: :recurring,
+            stored_credential_alternate_gateway: :scheme_issued
+          )
+        )
+      end
+
+      it "omits stored credential options when not provided" do
+        expect(client).to receive(:purchase).with(
+          1000,
+          "PMT123",
+          hash_not_including(
+            :stored_credential_initiator,
+            :stored_credential_reason_type,
+            :stored_credential_alternate_gateway
+          )
+        ).and_return(success_response)
+
+        gateway.purchase(1000, source, gateway_options)
+      end
     end
 
     context "in :workflow mode" do
