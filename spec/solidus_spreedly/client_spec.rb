@@ -589,6 +589,61 @@ RSpec.describe SolidusSpreedly::Client do
     end
   end
 
+  describe "#verify" do
+    it "POSTs to the gateway-scoped verify endpoint with 3DS and retain fields" do
+      stub = stub_request(:post, "#{base_url}/gateways/GATEWAY123/verify.json")
+        .with(
+          body: {
+            transaction: {
+              payment_method_token: payment_method_token,
+              retain_on_success: true,
+              currency: "USD",
+              sca_provider_key: "SCA1",
+              attempt_3dsecure: true,
+              browser_info: "eyJ3aWR0aCI6MX0="
+            }
+          }
+        )
+        .to_return(status: 200, body: succeeded_body)
+
+      response = client.verify(
+        payment_method_token,
+        currency: "USD",
+        store: true,
+        sca_provider_key: "SCA1",
+        browser_info: "eyJ3aWR0aCI6MX0="
+      )
+
+      expect(stub).to have_been_requested
+      expect(response).to be_success
+    end
+
+    it "POSTs to the workflow-scoped verify endpoint when orchestration_mode is :workflow" do
+      workflow_client = described_class.new(
+        login: "env-key",
+        password: "access-secret",
+        orchestration_mode: :workflow,
+        workflow_key: "WORKFLOW1"
+      )
+
+      stub = stub_request(:post, "#{base_url}/transactions/verify.json")
+        .with(
+          body: {
+            transaction: {
+              payment_method_token: payment_method_token,
+              workflow_key: "WORKFLOW1"
+            }
+          }
+        )
+        .to_return(status: 200, body: succeeded_body)
+
+      response = workflow_client.verify(payment_method_token, orchestration_mode: :workflow)
+
+      expect(stub).to have_been_requested
+      expect(response).to be_success
+    end
+  end
+
   describe "#show / #find" do
     it "GETs the transaction-scoped show endpoint" do
       stub = stub_request(:get, "#{base_url}/transactions/TXN123.json")

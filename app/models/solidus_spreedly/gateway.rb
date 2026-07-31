@@ -143,6 +143,16 @@ module SolidusSpreedly
       client.complete(response_code, options)
     end
 
+    # Verify (auth+void) a vaulted/tokenized card. Used for add-card 3DS
+    # (non-payment SCA). Options mirror purchase (+browser_info, SCA, retain).
+    #
+    # @param payment_method_token [String] Spreedly payment method token
+    # @param options [Hash] verify context (see {#verify_options})
+    # @return [ActiveMerchant::Billing::Response]
+    def verify(payment_method_token, options = {})
+      client.verify(payment_method_token, verify_options(options))
+    end
+
     # Reverse a transaction before Solidus knows whether it has settled.
     #
     # If the transaction can still be voided we void it; otherwise we issue a
@@ -392,6 +402,40 @@ module SolidusSpreedly
 
     def currency_options(gateway_options)
       {currency: gateway_options[:currency]}.compact
+    end
+
+    # Options for {#verify}. Defaults +store+ (retain_on_success) to true so a
+    # successful frictionless verify keeps the payment method vaulted.
+    #
+    # @param options [Hash]
+    # @return [Hash]
+    def verify_options(options = {})
+      options = options.to_h.symbolize_keys
+      opts = {
+        orchestration_mode: orchestration_mode,
+        currency: options[:currency],
+        ip: options[:ip],
+        browser_info: options[:browser_info]
+      }.merge(verify_routing_options)
+
+      sca_key = options[:sca_provider_key].presence || preferred_sca_provider_key
+      opts[:sca_provider_key] = sca_key if sca_key.present?
+
+      opts[:store] = true if options.fetch(:store, true)
+      opts[:provision_network_token] = true if options[:provision_network_token]
+      opts[:attempt_network_token] = true if options[:attempt_network_token]
+
+      copy_stored_credential_options!(opts, options)
+
+      opts.compact
+    end
+
+    def verify_routing_options
+      if orchestration_mode == :workflow
+        {workflow_key: preferred_workflow_key}
+      else
+        {gateway_token: preferred_gateway_token}
+      end
     end
 
     def test_mode?

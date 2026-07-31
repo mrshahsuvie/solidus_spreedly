@@ -408,6 +408,41 @@ RSpec.describe SolidusSpreedly::Gateway do
     end
   end
 
+  describe "#verify" do
+    it "delegates to the client with routing and SCA options" do
+      gateway.preferred_sca_provider_key = "SCA1"
+
+      expect(client).to receive(:verify).with(
+        "PMT123",
+        hash_including(
+          orchestration_mode: :gateway,
+          gateway_token: "GATEWAY123",
+          sca_provider_key: "SCA1",
+          browser_info: "eyJ3aWR0aCI6MX0=",
+          store: true,
+          currency: "USD"
+        )
+      ).and_return(success_response)
+
+      expect(
+        gateway.verify(
+          "PMT123",
+          browser_info: "eyJ3aWR0aCI6MX0=",
+          currency: "USD"
+        )
+      ).to eq(success_response)
+    end
+
+    it "omits store when options[:store] is false" do
+      expect(client).to receive(:verify).with(
+        "PMT123",
+        hash_not_including(:store)
+      ).and_return(success_response)
+
+      gateway.verify("PMT123", store: false)
+    end
+  end
+
   describe "#credit" do
     it "delegates to the transaction-scoped refund" do
       expect(client).to receive(:refund).with(500, "TXN123", {currency: "USD"}).and_return(success_response)

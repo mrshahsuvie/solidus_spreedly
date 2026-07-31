@@ -106,6 +106,20 @@ module SolidusSpreedly
       commit(:post, "transactions/#{authorization}/complete.json", build_complete_body(options))
     end
 
+    # Public: Verify a payment method (Spreedly auth+void packaged as +verify+).
+    #
+    # Used for card-on-file / non-payment SCA (add-card SetupIntent parity).
+    # Routes like +purchase+/+authorize+ via gateway or workflow orchestration.
+    #
+    # payment_method_token - Spreedly payment method token.
+    # options              - Same shape as purchase for 3DS / retain / NT fields:
+    #                        :sca_provider_key, :browser_info, :store (retain_on_success),
+    #                        :gateway_token / :workflow_key / :orchestration_mode,
+    #                        :provision_network_token, :order_id, :ip, :email, etc.
+    def verify(payment_method_token, options = {})
+      commit(:post, transaction_path("verify", options), build_verify_body(payment_method_token, options))
+    end
+
     # Public: Fetch the current state of a transaction.
     #
     # authorization - The Spreedly transaction token to look up.
@@ -269,6 +283,21 @@ module SolidusSpreedly
       transaction[:browser_info] = options[:browser_info] if options[:browser_info]
       transaction.merge!(options[:context]) if options[:context].is_a?(Hash)
       transaction.empty? ? nil : {transaction: transaction}
+    end
+
+    # Internal: Build the body for verify (no amount; optional retain / 3DS / NT).
+    def build_verify_body(payment_method_token, options)
+      transaction = {payment_method_token: payment_method_token}
+      transaction[:retain_on_success] = true if options[:store]
+      transaction[:ip] = options[:ip] if options[:ip]
+      transaction[:currency] = options[:currency] if options[:currency]
+      add_network_tokenization(transaction, options)
+      add_stored_credentials(transaction, options)
+      add_three_ds(transaction, options)
+      add_workflow_key(transaction, options)
+      add_gateway_specific_fields(transaction, options)
+
+      {transaction: transaction}
     end
 
     # Internal: Build the body for POST /payment_methods.json.
