@@ -290,7 +290,7 @@ module SolidusSpreedly
       transaction = {payment_method_token: payment_method_token}
       transaction[:retain_on_success] = true if options[:store]
       transaction[:ip] = options[:ip] if options[:ip]
-      transaction[:currency] = options[:currency] if options[:currency]
+      transaction[:currency_code] = options[:currency] if options[:currency]
       add_network_tokenization(transaction, options)
       add_stored_credentials(transaction, options)
       add_three_ds(transaction, options)
@@ -371,12 +371,23 @@ module SolidusSpreedly
       transaction[:stored_credential_alternate_gateway] = alt.to_s if alt.present?
     end
 
+    # Spreedly Global 3DS (sca_provider_key) and gateway-specific 3DS
+    # (attempt_3dsecure) are mutually exclusive. Never send both.
+    # See https://developer.spreedly.com/docs/spreedly-3ds2-global-guide
     def add_three_ds(transaction, options)
-      transaction[:sca_provider_key] = options[:sca_provider_key] if options[:sca_provider_key]
-      transaction[:attempt_3dsecure] = true if options[:sca_provider_key] || options[:attempt_3dsecure]
+      if options[:sca_provider_key].present?
+        transaction[:sca_provider_key] = options[:sca_provider_key]
+      elsif options[:attempt_3dsecure]
+        transaction[:attempt_3dsecure] = true
+      end
       transaction[:browser_info] = options[:browser_info] if options[:browser_info]
       transaction[:redirect_url] = options[:redirect_url] if options[:redirect_url]
       transaction[:callback_url] = options[:callback_url] if options[:callback_url]
+      transaction[:sca_authentication_parameters] = {
+        test_scenario: {
+          scenario: "authenticated"
+        }
+      }
     end
 
     def add_workflow_key(transaction, options)

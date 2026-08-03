@@ -135,7 +135,6 @@ RSpec.describe SolidusSpreedly::Client do
                 amount: 1000,
                 currency_code: "USD",
                 sca_provider_key: "SCA1",
-                attempt_3dsecure: true,
                 redirect_url: "https://example.com/return",
                 callback_url: "https://example.com/callback"
               }
@@ -431,7 +430,7 @@ RSpec.describe SolidusSpreedly::Client do
       end
     end
 
-    it "adds 3DS2 fields when an sca_provider_key is supplied" do
+    it "adds Spreedly Global 3DS fields when an sca_provider_key is supplied" do
       stub = stub_request(:post, "#{base_url}/gateways/GATEWAY123/purchase.json")
         .with(
           body: {
@@ -440,7 +439,6 @@ RSpec.describe SolidusSpreedly::Client do
               amount: 1000,
               currency_code: "USD",
               sca_provider_key: "SCA1",
-              attempt_3dsecure: true,
               browser_info: {"java_enabled" => false}
             }
           }
@@ -452,6 +450,53 @@ RSpec.describe SolidusSpreedly::Client do
         payment_method_token,
         currency: "USD",
         sca_provider_key: "SCA1",
+        browser_info: {"java_enabled" => false}
+      )
+
+      expect(stub).to have_been_requested
+      expect(response).not_to be_success
+    end
+
+    it "does not send attempt_3dsecure alongside sca_provider_key" do
+      stub = stub_request(:post, "#{base_url}/gateways/GATEWAY123/purchase.json")
+        .with { |request|
+          body = JSON.parse(request.body)
+          transaction = body.fetch("transaction")
+          transaction["sca_provider_key"] == "SCA1" && !transaction.key?("attempt_3dsecure")
+        }
+        .to_return(status: 200, body: succeeded_body(state: "pending"))
+
+      client.purchase(
+        1000,
+        payment_method_token,
+        currency: "USD",
+        sca_provider_key: "SCA1",
+        attempt_3dsecure: true
+      )
+
+      expect(stub).to have_been_requested
+    end
+
+    it "sends attempt_3dsecure for gateway-specific 3DS when sca_provider_key is absent" do
+      stub = stub_request(:post, "#{base_url}/gateways/GATEWAY123/purchase.json")
+        .with(
+          body: {
+            transaction: {
+              payment_method_token: payment_method_token,
+              amount: 1000,
+              currency_code: "USD",
+              attempt_3dsecure: true,
+              browser_info: {"java_enabled" => false}
+            }
+          }
+        )
+        .to_return(status: 200, body: succeeded_body(state: "pending"))
+
+      response = client.purchase(
+        1000,
+        payment_method_token,
+        currency: "USD",
+        attempt_3dsecure: true,
         browser_info: {"java_enabled" => false}
       )
 
@@ -597,9 +642,8 @@ RSpec.describe SolidusSpreedly::Client do
             transaction: {
               payment_method_token: payment_method_token,
               retain_on_success: true,
-              currency: "USD",
+              currency_code: "USD",
               sca_provider_key: "SCA1",
-              attempt_3dsecure: true,
               browser_info: "eyJ3aWR0aCI6MX0="
             }
           }
@@ -608,7 +652,7 @@ RSpec.describe SolidusSpreedly::Client do
 
       response = client.verify(
         payment_method_token,
-        currency: "USD",
+        currency_code: "USD",
         store: true,
         sca_provider_key: "SCA1",
         browser_info: "eyJ3aWR0aCI6MX0="

@@ -343,10 +343,17 @@ well. Empty options send an empty body (Spreedly accepts that).
 
 ## 3DS2 / pending completion
 
-When a `sca_provider_key` is configured and the issuer requires a challenge, a
-`purchase`/`authorize` comes back in the Spreedly `pending` state (which the
-extension does **not** treat as success). After the shopper completes the
-browser challenge, the storefront posts to the completion endpoint:
+When a `sca_provider_key` is configured (Spreedly Global 3DS), the issuer may
+require a challenge and `purchase`/`authorize` comes back in the Spreedly
+`pending` state (which the extension does **not** treat as success).
+
+`sca_provider_key` and `attempt_3dsecure` are **mutually exclusive**. Spreedly
+Global 3DS uses only `sca_provider_key` (+ `browser_info`); `attempt_3dsecure`
+is for [gateway-specific 3DS](https://developer.spreedly.com/docs/gateway-specific-3ds2-guide)
+and must not be sent alongside an SCA provider key.
+
+After the shopper completes the browser challenge, the storefront posts to the
+completion endpoint:
 
 ```
 (GET|POST) /solidus_spreedly/payments/:payment_id/complete
