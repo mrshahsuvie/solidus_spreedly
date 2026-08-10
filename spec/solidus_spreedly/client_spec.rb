@@ -688,7 +688,7 @@ RSpec.describe SolidusSpreedly::Client do
     end
   end
 
-  describe "#show / #find" do
+  describe "#show / #find / #retrieve" do
     it "GETs the transaction-scoped show endpoint" do
       stub = stub_request(:get, "#{base_url}/transactions/TXN123.json")
         .to_return(status: 200, body: succeeded_body)
@@ -697,6 +697,16 @@ RSpec.describe SolidusSpreedly::Client do
 
       expect(stub).to have_been_requested
       expect(response).to be_success
+    end
+
+    it "aliases find / retrieve / show_transaction / retrieve_transaction to show" do
+      stub_request(:get, "#{base_url}/transactions/TXN123.json")
+        .to_return(status: 200, body: succeeded_body)
+
+      expect(client.find("TXN123")).to be_success
+      expect(client.retrieve("TXN123")).to be_success
+      expect(client.show_transaction("TXN123")).to be_success
+      expect(client.retrieve_transaction("TXN123")).to be_success
     end
   end
 
@@ -833,6 +843,128 @@ RSpec.describe SolidusSpreedly::Client do
 
       expect(stub).to have_been_requested
       expect(response).to be_success
+    end
+  end
+
+  describe "#show_payment_method" do
+    let(:auth_header) { "Basic #{Base64.strict_encode64("env-key:access-secret")}" }
+
+    def payment_method_body(token: payment_method_token, zip: nil, errors: [])
+      {
+        payment_method: {
+          token: token,
+          zip: zip,
+          errors: errors
+        }
+      }.to_json
+    end
+
+    it "GETs the payment method and returns PaymentMethodResponse on success" do
+      stub = stub_request(:get, "#{base_url}/payment_methods/PMT123.json")
+        .with(
+          headers: {
+            "Authorization" => auth_header,
+            "Accept" => "application/json"
+          }
+        )
+        .to_return(status: 200, body: payment_method_body(zip: "02180"))
+
+      response = client.show_payment_method("PMT123")
+
+      expect(stub).to have_been_requested
+      expect(response).to be_a(SolidusSpreedly::PaymentMethodResponse)
+      expect(response).to be_success
+      expect(response.payment_method_token).to eq("PMT123")
+      expect(response.payment_method["zip"]).to eq("02180")
+    end
+
+    it "maps top-level Spreedly errors" do
+      stub_request(:get, "#{base_url}/payment_methods/PMT123.json")
+        .to_return(
+          status: 404,
+          body: {
+            errors: [
+              {
+                key: "errors.not_found",
+                message: "Unable to find the specified payment method."
+              }
+            ]
+          }.to_json
+        )
+
+      response = client.show_payment_method("PMT123")
+
+      expect(response).not_to be_success
+      expect(response.error_code).to eq("errors.not_found")
+      expect(response.message).to eq("Unable to find the specified payment method.")
+    end
+  end
+
+  describe "#update_payment_method" do
+    let(:auth_header) { "Basic #{Base64.strict_encode64("env-key:access-secret")}" }
+
+    def payment_method_body(token: payment_method_token, attributes: {}, errors: [])
+      {
+        payment_method: {
+          token: token,
+          errors: errors
+        }.merge(attributes)
+      }.to_json
+    end
+
+    it "PUTs non-sensitive attributes and returns PaymentMethodResponse on success" do
+      stub = stub_request(:put, "#{base_url}/payment_methods/PMT123.json")
+        .with(
+          body: {payment_method: {zip: "02180", email: "a@b.com"}}.to_json,
+          headers: {
+            "Authorization" => auth_header,
+            "Content-Type" => "application/json",
+            "Accept" => "application/json"
+          }
+        )
+        .to_return(
+          status: 200,
+          body: payment_method_body(attributes: {zip: "02180", email: "a@b.com"})
+        )
+
+      response = client.update_payment_method("PMT123", {zip: "02180", email: "a@b.com"})
+
+      expect(stub).to have_been_requested
+      expect(response).to be_a(SolidusSpreedly::PaymentMethodResponse)
+      expect(response).to be_success
+      expect(response.payment_method_token).to eq("PMT123")
+      expect(response.payment_method["zip"]).to eq("02180")
+    end
+
+    it "applies expect: when verifying returned attributes" do
+      stub_request(:put, "#{base_url}/payment_methods/PMT123.json")
+        .to_return(status: 200, body: payment_method_body(attributes: {zip: "99999"}))
+
+      response = client.update_payment_method("PMT123", {zip: "02180"}, expect: {zip: "02180"})
+
+      expect(response).not_to be_success
+      expect(response.payment_method_token).to eq("PMT123")
+    end
+
+    it "maps top-level Spreedly errors" do
+      stub_request(:put, "#{base_url}/payment_methods/PMT123.json")
+        .to_return(
+          status: 404,
+          body: {
+            errors: [
+              {
+                key: "errors.not_found",
+                message: "Unable to find the specified payment method."
+              }
+            ]
+          }.to_json
+        )
+
+      response = client.update_payment_method("PMT123", {zip: "02180"})
+
+      expect(response).not_to be_success
+      expect(response.error_code).to eq("errors.not_found")
+      expect(response.message).to eq("Unable to find the specified payment method.")
     end
   end
 

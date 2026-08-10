@@ -18,8 +18,8 @@ module SolidusSpreedly
   #   * +:workflow+ - routes through a Spreedly composer workflow:
   #                   POST /v1/transactions/purchase.json (with +workflow_key+)
   #
-  # Every follow-up call (+capture+, +void+, +credit+, +complete+, +show+) is
-  # transaction-scoped and therefore mode-independent.
+  # Every follow-up call (+capture+, +void+, +credit+, +complete+, +show+/
+  # +retrieve+) is transaction-scoped and therefore mode-independent.
   class Client < ::ActiveMerchant::Billing::Gateway
     self.live_url = "https://core.spreedly.com/v1"
 
@@ -120,14 +120,20 @@ module SolidusSpreedly
       commit(:post, transaction_path("verify", options), build_verify_body(payment_method_token, options))
     end
 
-    # Public: Fetch the current state of a transaction.
+    # Public: Fetch (retrieve) a transaction by token.
+    # Spreedly: +GET /v1/transactions/{token}.json+.
     #
     # authorization - The Spreedly transaction token to look up.
+    #
+    # @return [ActiveMerchant::Billing::Response]
     def show(authorization, options = {})
       commit(:get, "transactions/#{authorization}.json", nil)
     end
 
     alias_method :find, :show
+    alias_method :retrieve, :show
+    alias_method :show_transaction, :show
+    alias_method :retrieve_transaction, :show
 
     # Public: Create a payment method in Spreedly (AddPaymentMethod).
     #
@@ -161,6 +167,44 @@ module SolidusSpreedly
     end
 
     alias_method :retain, :store
+
+    # Public: Fetch a vaulted payment method by token.
+    # Spreedly: +GET /v1/payment_methods/{token}.json+.
+    #
+    # Returns {SolidusSpreedly::PaymentMethodResponse}, not an ActiveMerchant
+    # billing response (the endpoint returns a payment_method payload).
+    #
+    # payment_method_token - The Spreedly payment method token.
+    #
+    # @return [SolidusSpreedly::PaymentMethodResponse]
+    def show_payment_method(payment_method_token)
+      raw = request(:get, "payment_methods/#{payment_method_token}.json", nil)
+      PaymentMethodResponse.from_raw(raw)
+    end
+
+    # Public: Update non-sensitive attributes on a vaulted payment method.
+    # Spreedly: +PUT /v1/payment_methods/{token}.json+.
+    #
+    # Use for billing address fields (e.g. +zip+), cardholder name, email,
+    # metadata, expiration month/year, and other non-sensitive attributes.
+    # Sensitive fields (PAN, CVV, bank account number) cannot be updated this
+    # way — create and retain a new payment method instead.
+    #
+    # Returns {SolidusSpreedly::PaymentMethodResponse}, not an ActiveMerchant
+    # billing response (the endpoint returns a payment_method payload).
+    #
+    # payment_method_token - The Spreedly payment method token.
+    # attributes           - Hash of payment_method fields to update
+    #                        (e.g. +{ zip: "02180", email: "a@b.com" }+).
+    # expect:              - Optional attribute expectations for success
+    #                        (same semantics as {PaymentMethodResponse.from_raw}).
+    #
+    # @return [SolidusSpreedly::PaymentMethodResponse]
+    def update_payment_method(payment_method_token, attributes, expect: {})
+      body = {payment_method: attributes.to_h}
+      raw = request(:put, "payment_methods/#{payment_method_token}.json", body)
+      PaymentMethodResponse.from_raw(raw, expect: expect)
+    end
 
     # Public: Update Advanced Vault +managed+ on a payment method without a paid
     # update. Spreedly: +PUT /v1/payment_methods/{token}/update_gratis.json+.
@@ -383,11 +427,9 @@ module SolidusSpreedly
       transaction[:browser_info] = options[:browser_info] if options[:browser_info]
       transaction[:redirect_url] = options[:redirect_url] if options[:redirect_url]
       transaction[:callback_url] = options[:callback_url] if options[:callback_url]
-      transaction[:sca_authentication_parameters] = {
-        test_scenario: {
-          scenario: "authenticated"
-        }
-      }
+      return if options[:sca_authentication_parameters].blank?
+
+      transaction[:sca_authentication_parameters] = options[:sca_authentication_parameters]
     end
 
     def add_workflow_key(transaction, options)

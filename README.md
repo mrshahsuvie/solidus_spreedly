@@ -145,6 +145,14 @@ SolidusSpreedly::Gateway.create!(
 Follow-up calls (`capture`, `void`, `credit`, `complete`, `show`) are
 transaction-token scoped and therefore identical in both modes.
 
+To look up a transaction by token (`GET /v1/transactions/{token}.json`):
+
+```ruby
+response = payment_method.client.show(transaction_token)
+# aliases: find, retrieve, show_transaction, retrieve_transaction
+response.params.dig("transaction", "state")
+```
+
 ### Store-wide overrides
 
 The initializer is only for store-wide overrides. The most common one is
@@ -310,6 +318,26 @@ Host apps typically set these via `gateway_options` so
 field is blank, neither field is sent.
 
 ### Vault helpers
+
+To fetch or update non-sensitive attributes on a vaulted payment method
+(billing address/`zip`, email, name, metadata, expiration, etc.):
+
+```ruby
+shown = payment_method.client.show_payment_method(payment_method_token)
+shown.payment_method["zip"]  # => nil or "02180"
+
+updated = payment_method.client.update_payment_method(
+  payment_method_token,
+  { zip: "02180" },
+  expect: { zip: "02180" } # optional
+)
+updated.success?
+```
+
+`show_payment_method` hits `GET /v1/payment_methods/{token}.json`.
+`update_payment_method` hits `PUT /v1/payment_methods/{token}.json`. Both return
+`SolidusSpreedly::PaymentMethodResponse`. Sensitive fields (PAN, CVV) cannot be
+changed this way — create and retain a new payment method instead.
 
 To flip Spreedly Advanced Vault's `managed` flag on a payment method without a
 paid update, call `update_gratis` on the gateway client:
