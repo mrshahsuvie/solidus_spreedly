@@ -19,7 +19,7 @@ Gem::Specification.new do |spec|
   spec.metadata['source_code_uri'] = 'https://github.com/suvie-eng/solidus_spreedly'
   spec.metadata['changelog_uri'] = 'https://github.com/suvie-eng/solidus_spreedly/blob/main/CHANGELOG.md'
 
-  spec.required_ruby_version = Gem::Requirement.new('>= 3.0', '< 4')
+  spec.required_ruby_version = Gem::Requirement.new('>= 3.0', '< 5')
 
   # Specify which files should be added to the gem when it is released.
   # The `git ls-files -z` loads the files in the RubyGem that have been added into git.
