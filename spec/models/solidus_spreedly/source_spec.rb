@@ -51,6 +51,66 @@ RSpec.describe SolidusSpreedly::Source do
     end
   end
 
+  describe "#can_void?" do
+    let(:payment_method) { create(:solidus_spreedly_payment_method) }
+    let(:source) { create(:solidus_spreedly_source, payment_method: payment_method) }
+
+    def build_payment(state:)
+      create(
+        :payment,
+        payment_method: payment_method,
+        source: source,
+        state: state,
+        response_code: "TXN123",
+        amount: 10
+      )
+    end
+
+    def store_purchase(payment, gateway_type:)
+      payment.log_entries.create!(
+        parsed_details: ActiveMerchant::Billing::Response.new(
+          true,
+          "Succeeded!",
+          {
+            "transaction" => {
+              "succeeded" => true,
+              "token" => payment.response_code,
+              "transaction_type" => "Purchase",
+              "gateway_type" => gateway_type
+            }
+          },
+          authorization: payment.response_code
+        )
+      )
+    end
+
+    it "returns false for a completed Stripe purchase" do
+      payment = build_payment(state: "completed")
+      store_purchase(payment, gateway_type: "stripe_payment_intents")
+
+      expect(source.can_void?(payment)).to be(false)
+    end
+
+    it "returns true for a completed Braintree purchase" do
+      payment = build_payment(state: "completed")
+      store_purchase(payment, gateway_type: "braintree")
+
+      expect(source.can_void?(payment)).to be(true)
+    end
+
+    it "returns true for a pending payment" do
+      payment = build_payment(state: "pending")
+
+      expect(source.can_void?(payment)).to be(true)
+    end
+
+    it "returns true for a completed payment with no log entry" do
+      payment = build_payment(state: "completed")
+
+      expect(source.can_void?(payment)).to be(true)
+    end
+  end
+
   describe "persistence and associations" do
     it "persists and is associated to a payment method" do
       source.save!

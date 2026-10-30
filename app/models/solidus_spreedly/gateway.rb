@@ -10,9 +10,10 @@ module SolidusSpreedly
   # mode and routing information through.
   #
   class Gateway < ::Spree::PaymentMethod
-    # Spreedly transaction types that represent a reversal already performed;
-    # such transactions can never be voided again.
-    REVERSAL_TRANSACTION_TYPES = %w[void credit].freeze
+    # @deprecated Use {SolidusSpreedly::VoidPolicy::REVERSAL_TRANSACTION_TYPES}.
+    # The policy owns this list. This alias remains so existing callers of the
+    # constant keep working.
+    REVERSAL_TRANSACTION_TYPES = VoidPolicy::REVERSAL_TRANSACTION_TYPES
 
     preference :environment_key, :string, default: nil
     preference :access_secret, :string, default: nil
@@ -184,6 +185,53 @@ module SolidusSpreedly
 
       void_response = void(payment.response_code, payment.source, {originator: payment})
       void_response.success? ? void_response : false
+    end
+
+    # The original charge stored on the payment, without calling Spreedly.
+    #
+    # Walks +payment.log_entries+ from newest to oldest and returns the
+    # transaction hash whose +token+ matches +payment.response_code+. Returns
+    # nil when nothing matches or a log entry cannot be parsed.
+    #
+    # @param payment [Spree::Payment]
+    # @return [Hash, nil]
+    def stored_transaction(payment)
+      token = payment.response_code.to_s
+      return nil if token.empty?
+
+      payment.log_entries.reorder(created_at: :desc, id: :desc).each do |entry|
+        transaction = transaction_from_log_entry(entry)
+        next unless transaction.is_a?(Hash)
+        return transaction if transaction["token"].to_s == token
+      end
+
+      nil
+    end
+
+    # Whether the original charge stored on +payment+ can be voided.
+    #
+    # Returns true when no stored transaction is found, so an uncertain answer
+    # keeps the previous behavior. Does not call Spreedly.
+    #
+    # @param payment [Spree::Payment]
+    # @return [Boolean]
+    def voidable_payment?(payment)
+      transaction = stored_transaction(payment)
+      return true if transaction.nil?
+
+      void_policy.voidable?(transaction)
+    end
+
+    # Whether a completed payment must not be voided. Pending and checkout
+    # payments return false, so Void stays available. {Source#can_void?} and
+    # the app guard both use this so the button and +void_transaction!+ agree.
+    #
+    # @param payment [Spree::Payment]
+    # @return [Boolean]
+    def void_refused?(payment)
+      return false unless payment.completed?
+
+      !voidable_payment?(payment)
     end
 
     # Payment profiles are supported: the Spreedly payment method token stored
@@ -443,14 +491,19 @@ module SolidusSpreedly
     end
 
     # Whether the given Spreedly transaction (as returned by #show) can still be
-    # reversed with a void rather than a credit. Overridable.
+    # reversed with a void rather than a credit.
     def voidable?(response)
-      transaction = transaction_params(response)
-      return false if transaction.blank?
-      return false unless transaction["succeeded"]
+      void_policy.voidable?(transaction_params(response))
+    end
 
-      transaction_type = transaction["transaction_type"].to_s.downcase
-      REVERSAL_TRANSACTION_TYPES.exclude?(transaction_type)
+    def void_policy
+      @void_policy ||= SolidusSpreedly.config.void_policy_class.constantize.new
+    end
+
+    def transaction_from_log_entry(entry)
+      transaction_params(entry.parsed_details).presence
+    rescue Spree::LogEntry::SerializationError, Psych::Exception
+      nil
     end
 
     def transaction_params(response)

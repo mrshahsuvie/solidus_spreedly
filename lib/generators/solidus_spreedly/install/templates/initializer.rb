@@ -9,4 +9,10 @@ SolidusSpreedly.configure do |config|
   # own gateway subclass (e.g. to override the canary `gateway_token_for` hook):
   #
   #   config.default_gateway_class = 'MyStore::SpreedlyGateway'
+  #
+  # Which succeeded Spreedly transactions can be voided. The value is a String
+  # class name. Subclass SolidusSpreedly::VoidPolicy and override a predicate
+  # (for example to add a Braintree settlement-age cutoff):
+  #
+  #   config.void_policy_class = 'MyStore::SpreedlyVoidPolicy'
 end
