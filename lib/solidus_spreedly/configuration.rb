@@ -6,8 +6,14 @@ module SolidusSpreedly
     # subclass (e.g. to customize the `gateway_token_for` routing hook).
     attr_accessor :default_gateway_class
 
+    # Class name (String) that answers whether a Spreedly transaction can be
+    # voided. The class must implement +#voidable?(transaction)+. suvie-cloud
+    # uses the default.
+    attr_accessor :void_policy_class
+
     def initialize
       @default_gateway_class = "SolidusSpreedly::Gateway"
+      @void_policy_class = "SolidusSpreedly::VoidPolicy"
     end
   end
 

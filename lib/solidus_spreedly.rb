@@ -3,6 +3,7 @@
 require "active_merchant"
 
 require "solidus_spreedly/configuration"
+require "solidus_spreedly/void_policy"
 require "solidus_spreedly/client"
 require "solidus_spreedly/payment_method_response"
 require "solidus_spreedly/version"

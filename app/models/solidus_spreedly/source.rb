@@ -39,7 +39,9 @@ module SolidusSpreedly
     end
 
     def can_void?(payment)
-      payment.can_void?
+      return false unless payment.can_void?
+
+      !payment.payment_method.void_refused?(payment)
     end
 
     def can_credit?(payment)

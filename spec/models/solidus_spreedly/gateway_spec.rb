@@ -478,6 +478,42 @@ RSpec.describe SolidusSpreedly::Gateway do
 
       expect(gateway.try_void(payment)).to be(false)
     end
+
+    it "returns false for a succeeded Stripe purchase without voiding" do
+      allow(gateway).to receive(:show).with("TXN123")
+        .and_return(transaction_response({
+          "succeeded" => true,
+          "transaction_type" => "Purchase",
+          "gateway_type" => "stripe_payment_intents"
+        }))
+      expect(client).not_to receive(:void)
+
+      expect(gateway.try_void(payment)).to be(false)
+    end
+
+    it "voids a succeeded Braintree purchase" do
+      allow(gateway).to receive(:show).with("TXN123")
+        .and_return(transaction_response({
+          "succeeded" => true,
+          "transaction_type" => "Purchase",
+          "gateway_type" => "braintree"
+        }))
+      expect(client).to receive(:void).with("TXN123").and_return(success_response)
+
+      expect(gateway.try_void(payment)).to eq(success_response)
+    end
+
+    it "voids a succeeded Stripe authorization" do
+      allow(gateway).to receive(:show).with("TXN123")
+        .and_return(transaction_response({
+          "succeeded" => true,
+          "transaction_type" => "Authorization",
+          "gateway_type" => "stripe"
+        }))
+      expect(client).to receive(:void).with("TXN123").and_return(success_response)
+
+      expect(gateway.try_void(payment)).to eq(success_response)
+    end
   end
 
   describe "#cancel" do
@@ -506,6 +542,129 @@ RSpec.describe SolidusSpreedly::Gateway do
       expect(client).to receive(:refund).with(nil, "TXN123", {}).and_return(success_response)
 
       expect(gateway.cancel("TXN123")).to eq(success_response)
+    end
+
+    it "refunds a succeeded Stripe purchase without voiding" do
+      allow(gateway).to receive(:show).with("TXN123")
+        .and_return(transaction_response({
+          "succeeded" => true,
+          "transaction_type" => "Purchase",
+          "gateway_type" => "stripe_payment_intents"
+        }))
+      expect(client).not_to receive(:void)
+      expect(client).to receive(:refund).with(nil, "TXN123", {}).and_return(success_response)
+
+      expect(gateway.cancel("TXN123")).to eq(success_response)
+    end
+  end
+
+  describe "#stored_transaction" do
+    let(:persisted_gateway) { create(:solidus_spreedly_payment_method) }
+    let(:source) { create(:solidus_spreedly_source, payment_method: persisted_gateway) }
+    let(:payment) do
+      create(
+        :payment,
+        payment_method: persisted_gateway,
+        source: source,
+        response_code: "TXN123",
+        state: "completed",
+        amount: 10
+      )
+    end
+
+    def store_response(payment_record, token:, gateway_type: "braintree", transaction_type: "Purchase")
+      payment_record.log_entries.create!(
+        parsed_details: ActiveMerchant::Billing::Response.new(
+          true,
+          "Succeeded!",
+          {
+            "transaction" => {
+              "succeeded" => true,
+              "token" => token,
+              "transaction_type" => transaction_type,
+              "gateway_type" => gateway_type
+            }
+          },
+          authorization: token
+        )
+      )
+    end
+
+    it "returns the transaction whose token matches the payment and ignores other entries" do
+      allow(persisted_gateway).to receive(:client).and_return(client)
+      store_response(payment, token: "OTHER")
+      match = store_response(payment, token: "TXN123", gateway_type: "stripe_payment_intents")
+
+      expect(client).not_to receive(:show)
+      expect(persisted_gateway.stored_transaction(payment)).to eq(
+        match.parsed_details.params["transaction"]
+      )
+    end
+
+    it "returns nil when no entry matches" do
+      store_response(payment, token: "OTHER")
+
+      expect(persisted_gateway.stored_transaction(payment)).to be_nil
+    end
+
+    it "returns nil when the only entry cannot be parsed" do
+      payment.log_entries.create!(details: "--- !ruby/object:Object {}\n")
+
+      expect(persisted_gateway.stored_transaction(payment)).to be_nil
+    end
+
+    it "skips an unparseable entry and still matches an older one" do
+      match = store_response(payment, token: "TXN123")
+      payment.log_entries.create!(details: "--- !ruby/object:Object {}\n")
+
+      expect(persisted_gateway.stored_transaction(payment.reload)).to eq(
+        match.parsed_details.params["transaction"]
+      )
+    end
+  end
+
+  describe "#voidable_payment?" do
+    let(:persisted_gateway) { create(:solidus_spreedly_payment_method) }
+    let(:payment) do
+      instance_double(Spree::Payment, response_code: "TXN123", log_entries: Spree::LogEntry.none)
+    end
+
+    it "returns true when there is no stored entry" do
+      allow(persisted_gateway).to receive(:stored_transaction).with(payment).and_return(nil)
+
+      expect(persisted_gateway.voidable_payment?(payment)).to be(true)
+    end
+
+    it "returns false for a stored Stripe purchase" do
+      allow(persisted_gateway).to receive(:stored_transaction).with(payment).and_return(
+        {"succeeded" => true, "transaction_type" => "Purchase", "gateway_type" => "stripe_payment_intents"}
+      )
+
+      expect(persisted_gateway.voidable_payment?(payment)).to be(false)
+    end
+  end
+
+  describe "#void_refused?" do
+    let(:persisted_gateway) { create(:solidus_spreedly_payment_method) }
+
+    it "is false for a pending payment" do
+      payment = instance_double(Spree::Payment, completed?: false)
+
+      expect(persisted_gateway.void_refused?(payment)).to be(false)
+    end
+
+    it "is true for a completed Stripe purchase" do
+      payment = instance_double(Spree::Payment, completed?: true)
+      allow(persisted_gateway).to receive(:voidable_payment?).with(payment).and_return(false)
+
+      expect(persisted_gateway.void_refused?(payment)).to be(true)
+    end
+
+    it "is false for a completed payment the policy still allows" do
+      payment = instance_double(Spree::Payment, completed?: true)
+      allow(persisted_gateway).to receive(:voidable_payment?).with(payment).and_return(true)
+
+      expect(persisted_gateway.void_refused?(payment)).to be(false)
     end
   end
 
